@@ -13,7 +13,7 @@ New lease on life 팀의 프로젝트에 참여해주셔서 감사합니다! 일
 2. **브랜치 생성**: `develop`에서 최신 내용을 `pull` 받은 후, `feat/도메인명` 브랜치를 생성합니다.
 3. **작업 및 커밋**: 커밋 메시지 규칙을 준수하며 작업합니다.
 4. **Pull Request**: `develop` 브랜치로 PR을 보냅니다.
-5. **코드 리뷰**: **최소 1명 이상의 승인(Approve)**이 필수입니다.
+5. **코드 리뷰**: **최소 1명 이상의 승인(Approve)** 이 필수입니다.
 6. **머지**: 리뷰 반영 후 **Squash and Merge** 방식으로 머지합니다.
 7. **병합 이후:** 브랜치는 삭제 해주세요.
 
@@ -62,3 +62,4 @@ public class UserCreateRequest { ... }
 @NoArgsConstructor  // 직렬화 대비 (Jackson 라이브러리 대응)
 public class UserResponse { ... }
 ```
+
