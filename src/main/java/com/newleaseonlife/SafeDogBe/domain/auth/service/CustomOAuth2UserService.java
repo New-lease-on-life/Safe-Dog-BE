@@ -9,7 +9,7 @@ import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.OAuthProvider;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
 import com.newleaseonlife.SafeDogBe.domain.auth.repository.OAuthAccountRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
-import com.newleaseonlife.SafeDogBe.domain.user.entity.UserStatus;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 import com.newleaseonlife.SafeDogBe.global.security.CustomPrincipal;
 

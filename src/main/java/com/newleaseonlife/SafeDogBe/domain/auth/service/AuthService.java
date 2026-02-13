@@ -9,11 +9,11 @@ import com.newleaseonlife.SafeDogBe.domain.auth.entity.RefreshToken;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
 import com.newleaseonlife.SafeDogBe.domain.auth.repository.RefreshTokenRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.global.exception.BusinessException;
 import com.newleaseonlife.SafeDogBe.global.exception.domain.AuthErrorCode;
 import com.newleaseonlife.SafeDogBe.global.exception.domain.UserErrorCode;
 import com.newleaseonlife.SafeDogBe.global.security.JwtTokenProvider;
-import com.newleaseonlife.SafeDogBe.domain.user.entity.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;

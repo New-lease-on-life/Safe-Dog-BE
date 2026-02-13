@@ -1,6 +1,6 @@
 package com.newleaseonlife.SafeDogBe.global.security;
 
-import com.newleaseonlife.SafeDogBe.domain.user.entity.UserRole;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserRole;
 import com.newleaseonlife.SafeDogBe.global.config.JwtProperties;
 
 import io.jsonwebtoken.Claims;
