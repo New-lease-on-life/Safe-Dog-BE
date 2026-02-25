@@ -80,6 +80,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         User newUser = User.builder()
                 .email(email)
                 .nickname(nickname)
+                .name(userInfo.getName())
                 .age(userInfo.getAge())
                 .status(UserStatus.ACTIVE)
                 .providerType(ProviderType.valueOf(userInfo.getProvider().toUpperCase()))
