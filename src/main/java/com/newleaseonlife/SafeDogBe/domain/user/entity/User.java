@@ -30,7 +30,6 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-@SuppressWarnings({"UnusedAssignment", "unused"})
 public class User {
 
     @Id
@@ -46,10 +45,31 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String nickname;
 
+    @Column(length = 50)
+    private String name;
+
+    @Column(length = 20)
+    private String phone;
+
     @Column(length = 10)
     private Integer age;
 
     private String profileImageUrl;
+
+    @Column(nullable = false)
+    private boolean termsOfServiceAgreed = false;
+
+    @Column(nullable = false)
+    private boolean privacyPolicyAgreed = false;
+
+    @Column(nullable = false)
+    private boolean personalInfoCollectionAgreed = false;
+
+    @Column(nullable = false)
+    private boolean notificationAgreed = false;
+
+    @Column(nullable = false)
+    private boolean cameraAgreed = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -71,28 +91,51 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String password, String nickname, Integer age, String profileImageUrl,
+    public User(String email, String password, String nickname, String name, String phone, Integer age,
+                String profileImageUrl, boolean termsOfServiceAgreed, boolean privacyPolicyAgreed,
+                boolean personalInfoCollectionAgreed, boolean notificationAgreed, boolean cameraAgreed,
                 UserStatus status, UserRole role, ProviderType providerType) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
+        this.name = name;
+        this.phone = phone;
         this.age = age;
         this.profileImageUrl = profileImageUrl;
+        this.termsOfServiceAgreed = termsOfServiceAgreed;
+        this.privacyPolicyAgreed = privacyPolicyAgreed;
+        this.personalInfoCollectionAgreed = personalInfoCollectionAgreed;
+        this.notificationAgreed = notificationAgreed;
+        this.cameraAgreed = cameraAgreed;
         this.status = status != null ? status : UserStatus.ACTIVE;
         this.role = role != null ? role : UserRole.USER;
         this.providerType = providerType;
     }
 
-    @SuppressWarnings("unused")
     public void updateNickname(String newNickname) {
         this.nickname = newNickname;
         this.updatedAt = LocalDateTime.now();
     }
 
-    @SuppressWarnings("unused")
     public void updateProfile(String nickname, String profileImageUrl) {
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateAdditionalInfo(String name, String phone,
+                                      boolean termsOfService,
+                                      boolean privacyPolicy,
+                                      boolean personalInfoCollection,
+                                      boolean notification,
+                                      boolean camera) {
+        this.name = name;
+        this.phone = phone;
+        this.termsOfServiceAgreed = termsOfService;
+        this.privacyPolicyAgreed = privacyPolicy;
+        this.personalInfoCollectionAgreed = personalInfoCollection;
+        this.notificationAgreed = notification;
+        this.cameraAgreed = camera;
         this.updatedAt = LocalDateTime.now();
     }
 }
