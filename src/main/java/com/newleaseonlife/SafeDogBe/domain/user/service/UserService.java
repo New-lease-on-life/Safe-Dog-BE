@@ -41,4 +41,19 @@ public class UserService {
                 });
         return userConverter.toResponse(user);
     }
+
+    /**
+     * 전화번호 + 이름 기준 중복 여부 검사. 중복이면 BusinessException(ALREADY_REGISTERED_PHONE_NAME) 발생.
+     */
+    public void checkDuplicateByPhoneAndName(String phone, String name) {
+        if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
+            return;
+        }
+        String p = phone.trim();
+        String n = name.trim();
+        if (userRepository.existsByPhoneAndName(p, n)) {
+            log.info("[UserService] 전화번호+이름 중복 감지 phone={}, name={}", p, n);
+            throw new BusinessException(UserErrorCode.ALREADY_REGISTERED_PHONE_NAME);
+        }
+    }
 }
