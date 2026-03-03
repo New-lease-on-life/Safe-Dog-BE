@@ -13,6 +13,8 @@ public class UserConverter {
                 .id(user.getId())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
+                .name(user.getName())
+                .birthDate(user.getBirthDate())
                 .providerType(user.getProviderType())
                 .profileImageUrl(user.getProfileImageUrl())
                 .role(user.getRole())

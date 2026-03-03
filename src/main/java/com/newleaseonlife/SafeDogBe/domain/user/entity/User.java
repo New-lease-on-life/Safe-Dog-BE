@@ -23,6 +23,7 @@ import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -30,14 +31,13 @@ import java.time.LocalDateTime;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EntityListeners(AuditingEntityListener.class)
-@SuppressWarnings({"UnusedAssignment", "unused"})
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(unique = true, length = 100)
     private String email;
 
     @Column(length = 255)
@@ -46,8 +46,13 @@ public class User {
     @Column(nullable = false, unique = true, length = 50)
     private String nickname;
 
-    @Column(length = 10)
-    private Integer age;
+    @Column(length = 50)
+    private String name;
+
+    @Column(length = 20)
+    private String phone;
+
+    private LocalDate birthDate;
 
     private String profileImageUrl;
 
@@ -71,28 +76,37 @@ public class User {
     private LocalDateTime updatedAt;
 
     @Builder
-    public User(String email, String password, String nickname, Integer age, String profileImageUrl,
+    public User(String email, String password, String nickname, String name, String phone,
+                LocalDate birthDate, String profileImageUrl,
                 UserStatus status, UserRole role, ProviderType providerType) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
-        this.age = age;
+        this.name = name;
+        this.phone = phone;
+        this.birthDate = birthDate;
         this.profileImageUrl = profileImageUrl;
         this.status = status != null ? status : UserStatus.ACTIVE;
         this.role = role != null ? role : UserRole.USER;
         this.providerType = providerType;
     }
 
-    @SuppressWarnings("unused")
     public void updateNickname(String newNickname) {
         this.nickname = newNickname;
         this.updatedAt = LocalDateTime.now();
     }
 
-    @SuppressWarnings("unused")
-    public void updateProfile(String nickname, String profileImageUrl) {
-        this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
+    public void updateProfile(String name, String nickname, String profileImageUrl) {
+        if (name != null) this.name = name;
+        if (nickname != null) this.nickname = nickname;
+        if (profileImageUrl != null) this.profileImageUrl = profileImageUrl;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateAdditionalInfo(String name, String phone, LocalDate birthDate) {
+        this.name = name;
+        this.phone = phone;
+        this.birthDate = birthDate;
         this.updatedAt = LocalDateTime.now();
     }
 }
