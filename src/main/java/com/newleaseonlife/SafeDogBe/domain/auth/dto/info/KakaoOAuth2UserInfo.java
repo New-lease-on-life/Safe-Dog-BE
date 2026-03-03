@@ -39,22 +39,6 @@ public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
     }
 
     @Override
-    public Integer getAge() {
-        if (kakaoAccount == null) {
-            return null;
-        }
-        String ageRange = (String) kakaoAccount.get("age_range");
-        if (ageRange == null) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(ageRange.split("~")[0]);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }

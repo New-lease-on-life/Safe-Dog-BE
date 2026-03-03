@@ -6,22 +6,24 @@ import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.RefreshTokenRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SignupRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
 import com.newleaseonlife.SafeDogBe.domain.auth.service.AuthService;
-import com.newleaseonlife.SafeDogBe.domain.user.dto.response.UserResponse;
-import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.service.UserService;
+import com.newleaseonlife.SafeDogBe.global.exception.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.exception.domain.AuthErrorCode;
+import com.newleaseonlife.SafeDogBe.global.security.CookieUtils;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -32,6 +34,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+    private final CookieUtils cookieUtils;
 
     /**
      * 전화번호 + 이름 기준 중복 체크. 중복이면 409, 없으면 204.
@@ -50,35 +53,68 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * 로그인 성공 시 HttpOnly 쿠키로 토큰 발급.
+     * JSON 바디에도 토큰 포함 (모바일 앱 호환용).
+     */
     @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request,
+                                               HttpServletResponse response) {
         log.info("[AuthController] login 요청 email={}", request.getEmail());
-        TokenResponse response = authService.login(request);
-        return ResponseEntity.ok(response);
+        TokenResponse tokenResponse = authService.login(request);
+        cookieUtils.addAccessTokenCookie(response, tokenResponse.getAccessToken(),
+                tokenResponse.getAccessTokenExpiresIn());
+        cookieUtils.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
+        return ResponseEntity.ok(tokenResponse);
     }
 
+    /**
+     * 토큰 갱신: 쿠키의 refresh_token 우선 사용, 없으면 요청 바디에서 읽음.
+     */
     @PostMapping("/refresh")
-    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<TokenResponse> refresh(
+            @RequestBody(required = false) RefreshTokenRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
         log.info("[AuthController] refresh 요청");
-        TokenResponse response = authService.refresh(request);
-        return ResponseEntity.ok(response);
+
+        String refreshToken = resolveRefreshToken(httpRequest, request);
+        TokenResponse tokenResponse = authService.refresh(new RefreshTokenRequest(refreshToken));
+
+        cookieUtils.addAccessTokenCookie(httpResponse, tokenResponse.getAccessToken(),
+                tokenResponse.getAccessTokenExpiresIn());
+        cookieUtils.addRefreshTokenCookie(httpResponse, tokenResponse.getRefreshToken());
+        return ResponseEntity.ok(tokenResponse);
     }
 
+    /**
+     * 로그아웃: 쿠키 삭제 + refresh_token DB에서 무효화.
+     */
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<Void> logout(
+            @RequestBody(required = false) RefreshTokenRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
         log.info("[AuthController] logout 요청");
-        authService.logout(request.getRefreshToken());
+
+        String refreshToken = resolveRefreshToken(httpRequest, request);
+        authService.logout(refreshToken);
+        cookieUtils.deleteTokenCookies(httpResponse);
         return ResponseEntity.ok().build();
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<UserResponse> me(@AuthenticationPrincipal User user) {
-        log.info("[AuthController] me 요청 user={}", user != null ? user.getId() : "null");
-        if (user == null) {
-            log.warn("[AuthController] me 인증 없음");
-            return ResponseEntity.status(401).build();
+    /**
+     * refresh_token 추출: 쿠키 우선 → 요청 바디 폴백.
+     * 둘 다 없으면 INVALID_REFRESH_TOKEN 예외.
+     */
+    private String resolveRefreshToken(HttpServletRequest httpRequest, RefreshTokenRequest body) {
+        String fromCookie = CookieUtils.readCookie(httpRequest, CookieUtils.REFRESH_TOKEN_COOKIE);
+        if (StringUtils.hasText(fromCookie)) {
+            return fromCookie;
         }
-        UserResponse response = userService.findById(user.getId());
-        return ResponseEntity.ok(response);
+        if (body != null && StringUtils.hasText(body.getRefreshToken())) {
+            return body.getRefreshToken();
+        }
+        throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
     }
 }
