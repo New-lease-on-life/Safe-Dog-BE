@@ -1,6 +1,5 @@
 package com.newleaseonlife.SafeDogBe.global.security;
 
-import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 
 import jakarta.servlet.FilterChain;
@@ -11,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -19,7 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -39,11 +36,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(token) && jwtTokenProvider.validateAccessToken(token)) {
             Long userId = jwtTokenProvider.getUserIdFromAccessToken(token);
             userRepository.findById(userId).ifPresent(user -> {
-                List<SimpleGrantedAuthority> authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-                );
+                CustomPrincipal principal = new CustomPrincipal(user, Collections.emptyMap());
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(user, null, authorities);
+                        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             });
         }
@@ -52,6 +47,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
+        // 1. 쿠키 우선 (웹 브라우저)
+        String fromCookie = CookieUtils.readCookie(request, CookieUtils.ACCESS_TOKEN_COOKIE);
+        if (StringUtils.hasText(fromCookie)) {
+            return fromCookie;
+        }
+        // 2. Authorization 헤더 폴백 (모바일 앱)
         String bearer = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearer) && bearer.startsWith(BEARER_PREFIX)) {
             return bearer.substring(BEARER_PREFIX.length());

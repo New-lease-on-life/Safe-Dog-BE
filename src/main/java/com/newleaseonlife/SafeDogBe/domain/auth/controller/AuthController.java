@@ -1,5 +1,6 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.controller;
 
+import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.CheckDuplicateRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.LoginRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.RefreshTokenRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SignupRequest;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
@@ -30,6 +32,16 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserService userService;
+
+    /**
+     * 전화번호 + 이름 기준 중복 체크. 중복이면 409, 없으면 204.
+     */
+    @GetMapping("/check-duplicate")
+    public ResponseEntity<Void> checkDuplicate(@Valid CheckDuplicateRequest request) {
+        log.info("[AuthController] 중복 체크 요청 phone={}, name={}", request.phone(), request.name());
+        userService.checkDuplicateByPhoneAndName(request.phone(), request.name());
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping("/signup")
     public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
