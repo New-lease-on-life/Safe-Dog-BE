@@ -36,8 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/refresh",
                                 "/api/auth/logout", "/api/auth/check-duplicate",
                                 "/login/**", "/oauth2/**").permitAll()
-                        .requestMatchers("/api/terms").permitAll()
-                        .requestMatchers("/api/users/check-nickname").permitAll()
+                        .requestMatchers("/api/terms", "/api/users/check-nickname").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())

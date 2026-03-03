@@ -11,11 +11,16 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum AuthErrorCode implements ApiCode {
 
-    EMAIL_DUPLICATION(HttpStatus.BAD_REQUEST.value(), 400, "이미 존재하는 이메일입니다."),
-    LOGIN_FAILED(HttpStatus.UNAUTHORIZED.value(), 401, "아이디 또는 비밀번호가 잘못되었습니다."),
-    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED.value(), 401, "유효하지 않은 리프레시 토큰입니다.");
+    EMAIL_DUPLICATION(HttpStatus.BAD_REQUEST, 400, "이미 존재하는 이메일입니다."),
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, 401, "아이디 또는 비밀번호가 잘못되었습니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, 401, "유효하지 않은 리프레시 토큰입니다.");
 
-    private final Integer httpStatus;
+    private final HttpStatus httpStatus;
     private final Integer code;
     private final String message;
+
+    @Override
+    public HttpStatus getHttpStatus() {
+        return this.httpStatus;
+    }
 }

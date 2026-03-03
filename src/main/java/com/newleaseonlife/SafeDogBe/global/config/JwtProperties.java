@@ -14,6 +14,6 @@ public class JwtProperties {
 
     private String accsecret;
     private String refsecret;
-    private long accessTokenExpiration = 1_800_000L;   // 30분
-    private long refreshTokenExpiration = 604_800_000L; // 7일
+    private long accessTokenExpiration = 1_800_000L;    // 30분
+    private long refreshTokenExpiration = 1_209_600_000L; // 14일 (CookieUtils REFRESH_TOKEN_MAX_AGE와 동일)
 }

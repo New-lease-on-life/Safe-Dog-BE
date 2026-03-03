@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,6 +19,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -40,19 +42,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.debug("[JwtAuthenticationFilter] 인증 성공 userId={}", userId);
             });
         }
 
         filterChain.doFilter(request, response);
     }
 
+    // 1. 쿠키 우선 (웹 브라우저), 2. Authorization 헤더 폴백 (모바일 앱)
     private String resolveToken(HttpServletRequest request) {
-        // 1. 쿠키 우선 (웹 브라우저)
         String fromCookie = CookieUtils.readCookie(request, CookieUtils.ACCESS_TOKEN_COOKIE);
         if (StringUtils.hasText(fromCookie)) {
             return fromCookie;
         }
-        // 2. Authorization 헤더 폴백 (모바일 앱)
         String bearer = request.getHeader(AUTHORIZATION_HEADER);
         if (StringUtils.hasText(bearer) && bearer.startsWith(BEARER_PREFIX)) {
             return bearer.substring(BEARER_PREFIX.length());

@@ -53,10 +53,7 @@ public class UserService {
                 });
 
         if (request.nickname() != null && !request.nickname().equals(user.getNickname())) {
-            if (userRepository.existsByNickname(request.nickname())) {
-                log.warn("[UserService] updateProfile 실패 - 닉네임 중복 nickname={}", request.nickname());
-                throw new BusinessException(UserErrorCode.NICKNAME_DUPLICATION);
-            }
+            checkNicknameDuplicate(request.nickname());
         }
 
         user.updateProfile(request.name(), request.nickname(), request.profileImageUrl());

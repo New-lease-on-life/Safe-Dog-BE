@@ -1,7 +1,11 @@
 package com.newleaseonlife.SafeDogBe.global.error;
 
 import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
+
+import jakarta.validation.ConstraintViolationException;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -30,7 +34,7 @@ public class GlobalExceptionHandler {
         ));
   }
 
-  // 2. @Valid 검증 실패 처리
+  // 2. @Valid / @RequestBody 검증 실패
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
     String message = e.getBindingResult().getFieldErrors().stream()
@@ -46,7 +50,21 @@ public class GlobalExceptionHandler {
         .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message));
   }
 
-  // 3. JPA 낙관적 락 충돌 처리
+  // 3. @Validated + @RequestParam 검증 실패 (UserController.checkNickname 등)
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException e) {
+    String message = e.getConstraintViolations().stream()
+        .findFirst()
+        .map(v -> v.getMessage() != null ? v.getMessage() : "잘못된 요청입니다.")
+        .orElse(CommonErrorCode.BAD_REQUEST.getMessage());
+    ApiCode code = CommonErrorCode.BAD_REQUEST;
+    log.warn("[ConstraintViolationException] message={}", message);
+    return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message));
+  }
+
+  // 4. JPA 낙관적 락 충돌 처리
   @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
   public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
     log.error("[OptimisticLockException] 동시 수정 충돌 발생", e);
