@@ -31,11 +31,6 @@ public class GoogleOAuth2UserInfo implements OAuth2UserInfo {
     }
 
     @Override
-    public Integer getAge() {
-        return null;
-    }
-
-    @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }
