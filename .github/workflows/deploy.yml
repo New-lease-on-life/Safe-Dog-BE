@@ -1,4 +1,10 @@
 # .github/workflows/deploy.yml
+name: Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+    
 permissions:
   id-token: write # OIDC 사용을 위해 필수
   contents: read
@@ -6,8 +12,11 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.build-image.outputs.image_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       # 1. AWS 자격 증명 획득 (OIDC 방식)
       - name: Configure AWS credentials
