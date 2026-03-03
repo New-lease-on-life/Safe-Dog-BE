@@ -16,10 +16,10 @@ import com.newleaseonlife.SafeDogBe.domain.term.repository.UserTermRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
-import com.newleaseonlife.SafeDogBe.global.exception.BusinessException;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.AuthErrorCode;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.TermErrorCode;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.UserErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.AuthErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.TermErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 import com.newleaseonlife.SafeDogBe.global.security.JwtTokenProvider;
 
 import lombok.RequiredArgsConstructor;

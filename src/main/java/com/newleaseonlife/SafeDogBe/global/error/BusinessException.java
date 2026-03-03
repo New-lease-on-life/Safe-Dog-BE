@@ -1,4 +1,4 @@
-package com.newleaseonlife.SafeDogBe.global.exception;
+package com.newleaseonlife.SafeDogBe.global.error;
 
 import lombok.Getter;
 

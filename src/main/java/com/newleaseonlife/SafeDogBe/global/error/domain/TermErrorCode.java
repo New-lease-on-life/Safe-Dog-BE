@@ -1,6 +1,6 @@
-package com.newleaseonlife.SafeDogBe.global.exception.domain;
+package com.newleaseonlife.SafeDogBe.global.error.domain;
 
-import com.newleaseonlife.SafeDogBe.global.exception.ApiCode;
+import com.newleaseonlife.SafeDogBe.global.error.ApiCode;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

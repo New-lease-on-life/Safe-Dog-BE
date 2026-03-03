@@ -5,8 +5,8 @@ import com.newleaseonlife.SafeDogBe.domain.user.dto.request.UserUpdateRequest;
 import com.newleaseonlife.SafeDogBe.domain.user.dto.response.UserResponse;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
-import com.newleaseonlife.SafeDogBe.global.exception.BusinessException;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.UserErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

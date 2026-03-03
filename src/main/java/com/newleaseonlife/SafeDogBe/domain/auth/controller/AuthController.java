@@ -7,8 +7,8 @@ import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SignupRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
 import com.newleaseonlife.SafeDogBe.domain.auth.service.AuthService;
 import com.newleaseonlife.SafeDogBe.domain.user.service.UserService;
-import com.newleaseonlife.SafeDogBe.global.exception.BusinessException;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.AuthErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.AuthErrorCode;
 import com.newleaseonlife.SafeDogBe.global.security.CookieUtils;
 
 import jakarta.servlet.http.HttpServletRequest;
