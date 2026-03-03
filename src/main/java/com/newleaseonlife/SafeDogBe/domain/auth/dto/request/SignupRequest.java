@@ -1,12 +1,19 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.dto.request;
 
+import com.newleaseonlife.SafeDogBe.domain.term.dto.request.TermAgreementRequest;
+
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -25,5 +32,9 @@ public class SignupRequest {
     @Size(max = 50)
     private String nickname;
 
-    private Integer age;
+    private LocalDate birthDate;
+
+    @NotEmpty(message = "약관 동의 목록은 필수입니다.")
+    @Valid
+    private List<TermAgreementRequest> terms;
 }

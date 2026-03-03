@@ -8,13 +8,19 @@ import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.RefreshToken;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
 import com.newleaseonlife.SafeDogBe.domain.auth.repository.RefreshTokenRepository;
+import com.newleaseonlife.SafeDogBe.domain.term.dto.request.TermAgreementRequest;
+import com.newleaseonlife.SafeDogBe.domain.term.entity.Term;
+import com.newleaseonlife.SafeDogBe.domain.term.entity.UserTerm;
+import com.newleaseonlife.SafeDogBe.domain.term.repository.TermRepository;
+import com.newleaseonlife.SafeDogBe.domain.term.repository.UserTermRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
-import com.newleaseonlife.SafeDogBe.global.exception.BusinessException;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.AuthErrorCode;
-import com.newleaseonlife.SafeDogBe.global.exception.domain.UserErrorCode;
-import com.newleaseonlife.SafeDogBe.global.security.JwtTokenProvider;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.AuthErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.TermErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
+import com.newleaseonlife.SafeDogBe.global.security.JwtTokenProvider;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +30,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,6 +43,8 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TermRepository termRepository;
+    private final UserTermRepository userTermRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthConverter authConverter;
     private final PasswordEncoder passwordEncoder;
@@ -49,16 +60,51 @@ public class AuthService {
             log.warn("[AuthService] signup 실패 - 닉네임 중복 nickname={}", request.getNickname());
             throw new BusinessException(UserErrorCode.NICKNAME_DUPLICATION);
         }
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
-                .age(request.getAge())
+                .birthDate(request.getBirthDate())
                 .status(UserStatus.ACTIVE)
                 .providerType(ProviderType.LOCAL)
                 .build();
         userRepository.save(user);
+
+        saveTermAgreements(user, request.getTerms());
         log.info("[AuthService] signup 완료 userId={}", user.getId());
+    }
+
+    private void saveTermAgreements(User user, List<TermAgreementRequest> termRequests) {
+        if (termRequests == null || termRequests.isEmpty()) {
+            return;
+        }
+        Map<Long, Boolean> agreementMap = termRequests.stream()
+                .collect(Collectors.toMap(TermAgreementRequest::termId, TermAgreementRequest::agreed));
+
+        List<Term> requiredTerms = termRepository.findAllByRequired(true);
+        for (Term required : requiredTerms) {
+            Boolean agreed = agreementMap.get(required.getId());
+            if (agreed == null || !agreed) {
+                log.warn("[AuthService] 필수 약관 미동의 termId={}", required.getId());
+                throw new BusinessException(TermErrorCode.REQUIRED_TERM_NOT_AGREED);
+            }
+        }
+
+        List<Term> allTerms = termRepository.findAllById(agreementMap.keySet());
+        if (allTerms.size() != agreementMap.size()) {
+            throw new BusinessException(TermErrorCode.TERM_NOT_FOUND);
+        }
+
+        List<UserTerm> userTerms = allTerms.stream()
+                .map(term -> UserTerm.builder()
+                        .user(user)
+                        .term(term)
+                        .agreed(agreementMap.get(term.getId()))
+                        .build())
+                .toList();
+        userTermRepository.saveAll(userTerms);
+        log.info("[AuthService] 약관 동의 저장 완료 userId={}, count={}", user.getId(), userTerms.size());
     }
 
     @Transactional
@@ -120,7 +166,7 @@ public class AuthService {
                 });
 
         User user = userRepository.findById(storedToken.getUserId())
-                .orElseThrow(() -> new BusinessException(AuthErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
         refreshTokenRepository.delete(storedToken);
         return issueTokenResponse(user);

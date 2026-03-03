@@ -81,7 +81,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .email(email)
                 .nickname(nickname)
                 .name(userInfo.getName())
-                .age(userInfo.getAge())
                 .status(UserStatus.ACTIVE)
                 .providerType(ProviderType.valueOf(userInfo.getProvider().toUpperCase()))
                 .build();

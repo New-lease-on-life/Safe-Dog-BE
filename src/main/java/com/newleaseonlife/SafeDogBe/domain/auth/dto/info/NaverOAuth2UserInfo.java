@@ -37,19 +37,6 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
     }
 
     @Override
-    public Integer getAge() {
-        String ageRange = (String) response.get("age");
-        if (ageRange == null) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(ageRange.split("-")[0]);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    @Override
     public Map<String, Object> getAttributes() {
         return attributes;
     }

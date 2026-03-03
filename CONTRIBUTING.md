@@ -63,3 +63,50 @@ public class UserCreateRequest { ... }
 public class UserResponse { ... }
 ```
 
+## 예외 처리
+
+### 에러코드(ErrorCode.class)
+ErrorCode.class에 각 도메인 영역에 맞추어서 에러 코드 추가하기.
+1. code 넘버는 각 도메인 앞글자 + 001 ~ 으로 시작하기.
+2. 코드 메세지는 기획팀이랑 상의하기(또는 일단 자세하게 작성하고 추후에 보고)
+
+
+### 커스텀 예외 사용법(CustomException.class)
+사용하는 시나리오
+
+기획서의 "이미 가입된 계정이 있어요" 요구사항을 구현하는 회원가입 서비스 로직(MemberService)을 작성한다고 가정.
+
+``` Java
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class MemberService {
+
+    private final MemberRepository memberRepository;
+
+    public void signUp(SignUpRequestDto request) {
+        // 1. 이름과 전화번호로 기존 회원 조회
+        boolean isExist = memberRepository.existsByNameAndPhoneNumber(
+                request.getName(), 
+                request.getPhoneNumber()
+        );
+
+        // 2. 이미 존재하는 회원이면 예외 발생! (여기서 CustomException 사용)
+        if (isExist) {
+            throw new CustomException(ErrorCode.DUPLICATE_ACCOUNT);
+        }
+
+        // 3. 예외가 안 터졌다면 정상 가입 로직 진행
+        // memberRepository.save(...);
+    }
+}
+```
+이렇게 사용하면 자동으로 GlobalExceptionHandler에서 예외를 낚아 채서 아래와 같이 응답으로 보낼것임.
+```json
+{
+  "status": 413,
+  "code": "C002",
+  "message": "10MB 이하의 이미지만 등록 가능합니다."
+}
+```
+

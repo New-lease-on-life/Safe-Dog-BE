@@ -12,7 +12,5 @@ public interface OAuth2UserInfo {
 
     String getName();
 
-    Integer getAge();
-
     Map<String, Object> getAttributes();
 }
