@@ -65,7 +65,7 @@ public class TermService {
         List<Term> requiredTerms = termRepository.findAllByRequired(true);
         for (Term required : requiredTerms) {
             Boolean agreed = agreementMap.get(required.getId());
-            if (agreed != null && !agreed) {
+            if (agreed == null || !agreed) {
                 log.warn("[TermService] 필수 약관 미동의 termId={}", required.getId());
                 throw new BusinessException(TermErrorCode.REQUIRED_TERM_NOT_AGREED);
             }

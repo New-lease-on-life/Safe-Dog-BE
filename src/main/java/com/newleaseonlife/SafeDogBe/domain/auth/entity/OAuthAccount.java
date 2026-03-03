@@ -26,7 +26,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "oauth_accounts",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "providerId"})
+        uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "provider_id"})
 )
 @Getter
 @Builder
