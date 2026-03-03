@@ -1,0 +1,26 @@
+# .github/workflows/deploy.yml
+permissions:
+  id-token: write # OIDC 사용을 위해 필수
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1. AWS 자격 증명 획득 (OIDC 방식)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ARN_GITHUB }} # 만든 Role ARN
+          aws-region: ap-northeast-2
+
+      # 2. ECR 로그인 (이 작업을 거치면 Jib이 자동으로 인증을 인식함)
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 3. Jib 빌드 및 푸시
+      - name: Build and push with Jib
+        run: ./gradlew jib
