@@ -75,6 +75,9 @@ public class User {
     @LastModifiedDate
     private LocalDateTime updatedAt;
 
+    @Column(nullable = false)
+    private boolean isOnboardingCompleted = false;
+
     @Builder
     public User(String email, String password, String nickname, String name, String phone,
                 LocalDate birthDate, String profileImageUrl,
@@ -107,6 +110,18 @@ public class User {
         this.name = name;
         this.phone = phone;
         this.birthDate = birthDate;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** 온보딩 완료 처리 (최초 로그인 후 한 번만 호출) */
+    public void completeOnboarding() {
+        this.isOnboardingCompleted = true;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /** 탈퇴 처리 (Soft Delete: status를 WITHDRAWN으로 변경) */
+    public void withdraw() {
+        this.status = UserStatus.WITHDRAWN;
         this.updatedAt = LocalDateTime.now();
     }
 }

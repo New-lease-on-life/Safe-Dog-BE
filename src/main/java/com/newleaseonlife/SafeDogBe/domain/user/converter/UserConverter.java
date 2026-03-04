@@ -18,6 +18,7 @@ public class UserConverter {
                 .providerType(user.getProviderType())
                 .profileImageUrl(user.getProfileImageUrl())
                 .role(user.getRole())
+                .isOnboardingCompleted(user.isOnboardingCompleted())
                 .build();
     }
 }
