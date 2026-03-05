@@ -3,6 +3,7 @@ package com.newleaseonlife.SafeDogBe.domain.pet.entity;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -14,6 +15,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import lombok.AccessLevel;
@@ -27,7 +29,13 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * 반려동물 엔티티. 메인 보호자(user)와 보호자 목록(guardians)을 가짐.
+ * Pet 삭제 시 guardians는 cascade + orphanRemoval로 함께 삭제됨.
+ */
 @Entity
 @Table(name = "pets")
 @Getter
@@ -39,9 +47,14 @@ public class Pet {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 메인 보호자(소유자). pets.user_id */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    /** 보호자 목록(OWNER, CAREGIVER). Pet 삭제 시 함께 삭제, guardian 제거 시 DB에서도 삭제(orphanRemoval) */
+    @OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PetGuardian> guardians = new ArrayList<>();
 
     @Column(nullable = false, length = 100)
     private String name;
@@ -84,6 +97,7 @@ public class Pet {
         this.profileImageUrl = profileImageUrl;
     }
 
+    /** 정보 수정. null이 아닌 필드만 반영 */
     public void update(String name, String species, String breed, LocalDate birthDate,
                        Gender gender, Boolean isNeutered, String profileImageUrl) {
         if (name != null) this.name = name;
