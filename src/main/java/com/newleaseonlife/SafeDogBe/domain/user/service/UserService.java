@@ -85,4 +85,29 @@ public class UserService {
             throw new BusinessException(UserErrorCode.ALREADY_REGISTERED_PHONE_NAME);
         }
     }
+
+    @Transactional
+    public UserResponse completeOnboarding(Long userId) {
+        log.info("[UserService] completeOnboarding userId={}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("[UserService] completeOnboarding 실패 - 사용자 없음 userId={}", userId);
+                    return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+                });
+        user.completeOnboarding();
+        log.info("[UserService] completeOnboarding 완료 userId={}", userId);
+        return userConverter.toResponse(user);
+    }
+
+    @Transactional
+    public void withdraw(Long userId) {
+        log.info("[UserService] withdraw userId={}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("[UserService] withdraw 실패 - 사용자 없음 userId={}", userId);
+                    return new BusinessException(UserErrorCode.USER_NOT_FOUND);
+                });
+        user.withdraw();
+        log.info("[UserService] withdraw 완료 userId={}", userId);
+    }
 }

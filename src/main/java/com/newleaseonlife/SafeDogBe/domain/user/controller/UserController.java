@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -45,6 +46,21 @@ public class UserController {
         log.info("[UserController] updateMe 요청 userId={}", principal.getUser().getId());
         UserResponse response = userService.updateProfile(principal.getUser().getId(), request);
         return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/me/onboarding-complete")
+    public ResponseEntity<UserResponse> completeOnboarding(
+            @AuthenticationPrincipal CustomPrincipal principal) {
+        log.info("[UserController] onboarding-complete 요청 userId={}", principal.getUser().getId());
+        UserResponse response = userService.completeOnboarding(principal.getUser().getId());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/me/withdraw")
+    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomPrincipal principal) {
+        log.info("[UserController] withdraw 요청 userId={}", principal.getUser().getId());
+        userService.withdraw(principal.getUser().getId());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/check-nickname")

@@ -24,4 +24,5 @@ public class UserResponse {
     private ProviderType providerType;
     private String profileImageUrl;
     private UserRole role;
+    private boolean isOnboardingCompleted;
 }
