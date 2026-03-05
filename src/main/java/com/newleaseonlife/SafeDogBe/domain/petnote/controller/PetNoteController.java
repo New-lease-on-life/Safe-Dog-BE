@@ -29,9 +29,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 반려노트 API.
- * 추후 연결: Pet 도메인 머지 후, petId에 대한 소유권 검증이 서비스 계층에서 이루어지므로
- * 동일한 엔드포인트를 유지하면서 보안만 강화하면 됨.
+ * 반려노트(PetNote) API. CRUD 및 날짜별 조회.
+ * 소유권 검증은 서비스 계층에서 수행(해당 Pet의 소유자만 조회·생성·수정·삭제 가능).
  */
 @Slf4j
 @RestController

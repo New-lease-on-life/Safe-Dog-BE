@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 반려노트 응답. 조회·등록·수정 API 응답에 사용.
+ */
 @Getter
 @Builder
 @NoArgsConstructor

@@ -1,12 +1,17 @@
 package com.newleaseonlife.SafeDogBe.domain.petnote.entity;
 
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.Pet;
 import com.newleaseonlife.SafeDogBe.global.common.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import lombok.AccessLevel;
@@ -17,12 +22,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 
 /**
- * 날짜별 반려동물 기록 (반려노트).
- * Pet 1 : N PetNote.
- *
- * 추후 연결: Pet 도메인 머지 후 아래를 적용할 예정.
- * - petId 대신 @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "pet_id") private Pet pet;
- * - getPetId()는 pet != null ? pet.getId() : null 로 제공하거나, pet 필드로 통일.
+ * 날짜별 반려동물 기록 (반려노트). Pet 1 : N PetNote.
  */
 @Entity
 @Table(name = "pet_notes")
@@ -34,24 +34,34 @@ public class PetNote extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 반려동물 ID. 추후 Pet 도메인 머지 시 @ManyToOne Pet pet 로 교체 후 연관관계 매핑 */
-    @Column(name = "pet_id", nullable = false)
-    private Long petId;
+    /** 대상 반려동물. FK 이름 fk_pet_notes_pet */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pet_id", nullable = false, foreignKey = @ForeignKey(name = "fk_pet_notes_pet"))
+    private Pet pet;
 
+    /** 기록 대상일. 날짜별 조회에 사용 */
     @Column(name = "note_date", nullable = false)
     private LocalDate noteDate;
 
+    /** 메모 내용. TEXT 타입 */
     @Column(columnDefinition = "TEXT")
     private String content;
 
     @Builder
-    public PetNote(Long petId, LocalDate noteDate, String content) {
-        this.petId = petId;
+    public PetNote(Pet pet, LocalDate noteDate, String content) {
+        this.pet = pet;
         this.noteDate = noteDate;
         this.content = content;
     }
 
-    public void update(String content) {
-        this.content = content;
+    /** 편의 메서드: petId가 필요한 경우를 위해 제공 */
+    public Long getPetId() {
+        return pet != null ? pet.getId() : null;
+    }
+
+    /** 내용·기록일 수정. null이 아닌 값만 반영 */
+    public void update(String content, LocalDate noteDate) {
+        if (content != null) this.content = content;
+        if (noteDate != null) this.noteDate = noteDate;
     }
 }
