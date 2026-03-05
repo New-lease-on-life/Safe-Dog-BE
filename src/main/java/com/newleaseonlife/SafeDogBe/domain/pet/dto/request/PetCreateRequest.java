@@ -12,6 +12,10 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
+/**
+ * 반려동물 등록 요청. POST /api/pets body.
+ * 요청자는 메인 보호자(pet.user)로 저장됨.
+ */
 @Getter
 @Builder
 @NoArgsConstructor
