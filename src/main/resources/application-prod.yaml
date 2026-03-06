@@ -3,9 +3,11 @@
 ################################
 
 spring:
-  application:
-    name:
-
+  config:
+    activate:
+      on-profile: prod
+    # 운영 프로필(prod)이 활성화될 때만 AWS SSM에서 파라미터를 가져옴
+    import: "aws-parameterstore:/safedog/prod/"
   # 1. 데이터베이스 설정
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true
@@ -105,9 +107,6 @@ server:
 
 cloud:
   aws:
-    credentials:
-      access-key: ${AWS_S3_Access Key}
-      secret-key: ${AWS_S3_Secret Key}
     region:
       static: ap-northeast-2 # 서울 리전
     s3:
