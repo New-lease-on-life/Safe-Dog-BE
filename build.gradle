@@ -75,8 +75,9 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // 10.AWS S3 연동을 위한 SDK
+    // 10.AWS S3 연동을 위한 SDK, Spring Cloud AWS Parameter Store
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.696'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store:3.1.1'
 }
 
 tasks.named('test') {
