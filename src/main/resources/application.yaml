@@ -1,5 +1,15 @@
+# ==========================================
+# 1. 공통 설정 (모든 환경 적용)
+# ==========================================
 spring:
-  profiles:
-    active: local
   application:
     name: SafeDogBe
+  profiles:
+    active: local # 기본 구동 환경을 local로 설정 (운영 서버 구동 시 환경변수로 prod 덮어쓰기)
+
+cloud:
+  aws:
+    region:
+      static: ap-northeast-2
+    s3:
+      bucket: safedog-bucket
