@@ -5,6 +5,7 @@ import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,9 +21,19 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+/**
+ * 회원-약관 동의 내역 엔티티.
+ * (user_id, term_id) 유니크로 한 사용자당 약관별 동의 이력 1건.
+ * agreedAt은 동의 시각(동의 시에만 기록).
+ */
 @Entity
-@Table(name = "user_terms",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "term_id"}))
+@Table(
+        name = "user_terms",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_user_terms_user_term",
+                columnNames = {"user_id", "term_id"}
+        )
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserTerm {
@@ -32,16 +43,25 @@ public class UserTerm {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(
+            name = "user_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_user_terms_user")
+    )
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "term_id", nullable = false)
+    @JoinColumn(
+            name = "term_id",
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_user_terms_term")
+    )
     private Term term;
 
     @Column(nullable = false)
-    private boolean agreed;
+    private boolean agreed = false;
 
+    @Column(name = "agreed_at")
     private LocalDateTime agreedAt;
 
     @Builder
@@ -52,6 +72,7 @@ public class UserTerm {
         this.agreedAt = agreed ? LocalDateTime.now() : null;
     }
 
+    /** 동의 여부 변경. agreed true 시 agreedAt을 현재 시각으로 설정, false 시 null. */
     public void updateAgreed(boolean agreed) {
         this.agreed = agreed;
         this.agreedAt = agreed ? LocalDateTime.now() : null;
