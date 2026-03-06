@@ -7,6 +7,8 @@ import lombok.Getter;
 
 import org.springframework.http.HttpStatus;
 
+/** 공통 에러 코드. (deprecation 경고: Spring HttpStatus 등 외부 API 사용으로 인한 ADVICE 수준) */
+@SuppressWarnings("deprecation")
 @AllArgsConstructor
 @Getter
 public enum CommonErrorCode implements ApiCode {
