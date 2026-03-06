@@ -102,3 +102,13 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_S3_Access Key}
+      secret-key: ${AWS_S3_Secret Key}
+    region:
+      static: ap-northeast-2 # 서울 리전
+    s3:
+      bucket: safedog-bucket # S3 버킷 이름
