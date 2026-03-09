@@ -34,7 +34,6 @@ spring:
     redis:
       host: redis
       port: 6379
-      password: ${REDIS_PASSWORD}
 
   # 4. OAuth2 설정
   security:
