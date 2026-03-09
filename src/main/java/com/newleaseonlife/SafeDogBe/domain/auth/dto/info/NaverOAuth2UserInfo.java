@@ -1,5 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.dto.info;
 
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
@@ -12,7 +14,8 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
         this.attributes = attributes;
         this.response = (Map<String, Object>) attributes.get("response");
         if (this.response == null) {
-            throw new IllegalStateException("Naver 응답에 response가 없습니다.");
+            // Spring Security OAuth2 흐름 내에서 올바르게 처리되도록 OAuth2AuthenticationException 사용
+            throw new OAuth2AuthenticationException("Naver 응답에 response 데이터가 없습니다.");
         }
     }
 
@@ -33,7 +36,9 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
 
     @Override
     public String getName() {
-        return (String) response.get("name");
+        String name = (String) response.get("name");
+        // Naver가 name을 제공하지 않는 경우 providerId 기반 닉네임으로 폴백
+        return name != null ? name : getProviderId();
     }
 
     @Override

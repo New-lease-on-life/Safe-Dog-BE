@@ -61,13 +61,16 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private User saveOrUpdate(OAuth2UserInfo userInfo) {
         OAuthProvider provider = OAuthProvider.valueOf(userInfo.getProvider().toUpperCase());
 
-        return oauthAccountRepository.findByProviderAndProviderId(provider, userInfo.getProviderId())
+        User user = oauthAccountRepository.findByProviderAndProviderId(provider, userInfo.getProviderId())
                 .map(OAuthAccount::getUser)
-                .map(user -> {
-                    log.debug("[CustomOAuth2UserService] 기존 OAuth 계정 로그인 userId={}", user.getId());
-                    return user;
+                .map(u -> {
+                    log.debug("[CustomOAuth2UserService] 기존 OAuth 계정 로그인 userId={}", u.getId());
+                    return u;
                 })
                 .orElseGet(() -> createUserAndOAuthAccount(userInfo, provider));
+
+        user.updateLastLogin(provider.name());
+        return user;
     }
 
     private User createUserAndOAuthAccount(OAuth2UserInfo userInfo, OAuthProvider provider) {
