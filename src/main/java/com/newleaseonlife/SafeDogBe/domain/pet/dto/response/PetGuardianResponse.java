@@ -16,7 +16,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PetGuardianResponse {
 
+    /** pet_guardian PK */
     private Long id;
+    /** 보호자 회원 ID */
     private Long userId;
+    /** 역할 (OWNER / CAREGIVER) */
     private PetGuardianRole role;
 }

@@ -146,7 +146,7 @@ public class PetService {
                 .pet(pet)
                 .role(request.getRole())
                 .build();
-        pet.getGuardians().add(guardian);
+        // pet.getGuardians().add()와 repository.save() 동시 호출 시 중복 INSERT 가능 → save()만 사용
         PetGuardian saved = petGuardianRepository.save(guardian);
         log.info("[PetService] addGuardian 완료 guardianId={}", saved.getId());
         return petConverter.toGuardianResponse(saved);

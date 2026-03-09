@@ -32,6 +32,7 @@ public class PetConverter {
                 .build();
     }
 
+    /** Pet 목록 → PetResponse 목록 */
     public List<PetResponse> toResponseList(List<Pet> pets) {
         return pets.stream()
                 .map(this::toResponse)
@@ -47,6 +48,7 @@ public class PetConverter {
                 .build();
     }
 
+    /** PetGuardian 목록 → PetGuardianResponse 목록 */
     public List<PetGuardianResponse> toGuardianResponseList(List<PetGuardian> guardians) {
         return guardians.stream()
                 .map(this::toGuardianResponse)
