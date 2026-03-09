@@ -21,12 +21,14 @@ import java.time.LocalDateTime;
 public class PetResponse {
 
     private Long id;
+    /** 메인 보호자(소유자) ID */
     private Long userId;
     private String name;
     private String species;
     private String breed;
     private LocalDate birthDate;
     private Gender gender;
+    /** 중성화 여부 */
     private boolean isNeutered;
     private String profileImageUrl;
     private LocalDateTime createdAt;
