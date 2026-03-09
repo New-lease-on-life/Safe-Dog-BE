@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import org.springframework.http.HttpStatus;
 
+/** 반려동물 도메인 오류 코드 (미존재, 접근 거부, 보호자 중복·미존재 등). */
 @AllArgsConstructor
 @Getter
 public enum PetErrorCode implements ApiCode {

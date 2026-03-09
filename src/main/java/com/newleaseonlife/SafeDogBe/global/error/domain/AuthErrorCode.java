@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import org.springframework.http.HttpStatus;
 
+/** 인증 도메인 오류 코드 (이메일 중복, 로그인 실패, 리프레시 토큰 무효). */
 @AllArgsConstructor
 @Getter
 public enum AuthErrorCode implements ApiCode {

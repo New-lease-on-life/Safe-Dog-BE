@@ -81,8 +81,8 @@ spring:
 
 # JWT 설정
 jwt:
-  accsecret: ${JWT_ACCSECRET}
-  refsecret: ${JWT_REFSECRET}
+  access-token-secret: ${JWT_ACCSECRET}
+  refresh-token-secret: ${JWT_REFSECRET}
   access-token-expiration: 1800000      # 30분
   refresh-token-expiration: 604800000   # 7일
 

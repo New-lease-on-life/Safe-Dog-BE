@@ -9,10 +9,16 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 
+/**
+ * 인증 쿠키(access_token, refresh_token) 추가·삭제·읽기.
+ * HttpOnly, SameSite=Lax, path/secure는 설정에 따라 적용. refresh_token은 /api/auth/refresh 경로로만 전송.
+ */
 @Component
 public class CookieUtils {
 
+    /** Access Token 쿠키 이름. path=/. */
     public static final String ACCESS_TOKEN_COOKIE  = "access_token";
+    /** Refresh Token 쿠키 이름. path=/api/auth/refresh 로만 전송. */
     public static final String REFRESH_TOKEN_COOKIE = "refresh_token";
 
     private static final String REFRESH_TOKEN_PATH = "/api/auth/refresh";

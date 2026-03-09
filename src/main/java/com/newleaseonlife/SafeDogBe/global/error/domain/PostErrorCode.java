@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import org.springframework.http.HttpStatus;
 
+/** 게시글 도메인 오류 코드 (미존재, 접근 거부, 카테고리 미존재). */
 @AllArgsConstructor
 @Getter
 public enum PostErrorCode implements ApiCode {

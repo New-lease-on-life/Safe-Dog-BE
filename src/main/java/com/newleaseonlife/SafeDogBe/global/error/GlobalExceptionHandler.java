@@ -14,10 +14,15 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+/**
+ * 전역 예외 처리. 비즈니스 예외·검증 실패·파일 용량·IllegalArgument·기타 예외를
+ * HTTP 상태코드와 ErrorResponse 형식으로 일관되게 반환한다.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** 도메인 비즈니스 예외 (AuthErrorCode, UserErrorCode 등). */
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
         ApiCode code = e.getCode();
@@ -79,6 +84,18 @@ public class GlobalExceptionHandler {
                 .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage()));
     }
 
+    // 잘못된 인자 (예: S3 파일 검증 실패 등) → 400 Bad Request
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
+        String message = e.getMessage() != null ? e.getMessage() : CommonErrorCode.BAD_REQUEST.getMessage();
+        log.warn("[IllegalArgumentException] message={}", message);
+        ApiCode code = CommonErrorCode.BAD_REQUEST;
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message));
+    }
+
+    /** 그 외 미처리 예외 → 500 Server Error. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAny(Exception e) {
         log.error("[UnhandledException] 예상치 못한 서버 에러", e);

@@ -16,6 +16,10 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+/**
+ * JWT Access/Refresh Token 발급·검증·파싱.
+ * JwtProperties의 시크릿과 만료 시간을 사용하며, claim에 userId, email, role, type(access/refresh)을 담는다.
+ */
 @Component
 @RequiredArgsConstructor
 public class JwtTokenProvider {
@@ -29,24 +33,26 @@ public class JwtTokenProvider {
 
     private final JwtProperties jwtProperties;
 
+    /** Access Token 생성 (type=access, JwtProperties.accessTokenExpiration 적용). */
     public String createAccessToken(Long userId, String email, UserRole role) {
         return createToken(
                 userId,
                 email,
                 role,
                 TOKEN_TYPE_ACCESS,
-                jwtProperties.getAccsecret(),
+                jwtProperties.getAccessTokenSecret(),
                 jwtProperties.getAccessTokenExpiration()
         );
     }
 
+    /** Refresh Token 생성 (type=refresh, JwtProperties.refreshTokenExpiration 적용). */
     public String createRefreshToken(Long userId, String email, UserRole role) {
         return createToken(
                 userId,
                 email,
                 role,
                 TOKEN_TYPE_REFRESH,
-                jwtProperties.getRefsecret(),
+                jwtProperties.getRefreshTokenSecret(),
                 jwtProperties.getRefreshTokenExpiration()
         );
     }
@@ -69,21 +75,24 @@ public class JwtTokenProvider {
                 .compact();
     }
 
+    /** Access Token에서 userId claim 추출. */
     public Long getUserIdFromAccessToken(String token) {
-        Claims claims = parseToken(token, jwtProperties.getAccsecret());
+        Claims claims = parseToken(token, jwtProperties.getAccessTokenSecret());
         return claims.get(CLAIM_USER_ID, Long.class);
     }
 
+    /** Access Token 서명·만료·type 검증. */
     public boolean validateAccessToken(String token) {
-        return validateToken(token, jwtProperties.getAccsecret(), TOKEN_TYPE_ACCESS);
+        return validateToken(token, jwtProperties.getAccessTokenSecret(), TOKEN_TYPE_ACCESS);
     }
 
+    /** Refresh Token 서명·만료·type 검증. */
     public boolean validateRefreshToken(String token) {
-        return validateToken(token, jwtProperties.getRefsecret(), TOKEN_TYPE_REFRESH);
+        return validateToken(token, jwtProperties.getRefreshTokenSecret(), TOKEN_TYPE_REFRESH);
     }
 
     public Long getUserIdFromRefreshToken(String token) {
-        Claims claims = parseToken(token, jwtProperties.getRefsecret());
+        Claims claims = parseToken(token, jwtProperties.getRefreshTokenSecret());
         return claims.get(CLAIM_USER_ID, Long.class);
     }
 

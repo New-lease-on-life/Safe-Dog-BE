@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import org.springframework.http.HttpStatus;
 
+/** 약관 도메인 오류 코드 (약관 미존재, 필수 약관 미동의, 이미 동의 등). */
 @AllArgsConstructor
 @Getter
 public enum TermErrorCode implements ApiCode {
