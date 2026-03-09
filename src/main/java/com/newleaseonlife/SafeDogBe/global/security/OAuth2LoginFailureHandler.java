@@ -11,12 +11,16 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
+/**
+ * OAuth2 로그인 실패 시 리다이렉트. 쿼리 파라미터 error=oauth2_login_failed, message=예외 메시지로 전달.
+ */
 @Component
 public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
     @Value("${app.oauth2.redirect-uri-after-login:/}")
     private String redirectUriAfterLogin;
 
+    /** redirectUriAfterLogin?error=oauth2_login_failed&message=... 로 리다이렉트 */
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
                                         AuthenticationException exception) throws IOException {

@@ -16,6 +16,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
+/**
+ * OAuth2 로그인 성공 시 토큰 발급·쿠키 설정 후 리다이렉트.
+ * AuthService.issueTokenResponse로 Access/Refresh 토큰 발급 후 쿠키에 담고, app.oauth2.redirect-uri-after-login으로 이동.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${app.oauth2.redirect-uri-after-login:/}")
     private String redirectUriAfterLogin;
 
+    /** 토큰 발급 → 쿠키 추가 → redirectUriAfterLogin으로 리다이렉트 */
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException {

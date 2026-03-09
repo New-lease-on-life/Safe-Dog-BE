@@ -7,6 +7,7 @@ import lombok.Getter;
 
 import org.springframework.http.HttpStatus;
 
+/** 유저 도메인 오류 코드 (미존재, 닉네임 중복, 전화번호·이름 중복, 복구 기간 만료 등). */
 @AllArgsConstructor
 @Getter
 public enum UserErrorCode implements ApiCode {

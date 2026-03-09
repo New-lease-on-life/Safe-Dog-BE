@@ -21,6 +21,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Spring Security 전역 설정.
+ * JWT 필터, OAuth2 로그인, CORS, 인가 경로(permitAll/authenticated)를 구성한다.
+ */
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class SecurityConfig {
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
 
+    /** CORS 설정. 쿠키 인증 허용, 로컬 개발 Origin 및 허용 메서드/헤더 정의. */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
@@ -45,6 +50,7 @@ public class SecurityConfig {
         return source;
     }
 
+    /** Stateless JWT + OAuth2 로그인, 인가 규칙, JWT 필터 위치 정의. */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
