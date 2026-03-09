@@ -35,7 +35,7 @@ public class JwtTokenProvider {
                 email,
                 role,
                 TOKEN_TYPE_ACCESS,
-                jwtProperties.getAccsecret(),
+                jwtProperties.getAccessTokenSecret(),
                 jwtProperties.getAccessTokenExpiration()
         );
     }
@@ -46,7 +46,7 @@ public class JwtTokenProvider {
                 email,
                 role,
                 TOKEN_TYPE_REFRESH,
-                jwtProperties.getRefsecret(),
+                jwtProperties.getRefreshTokenSecret(),
                 jwtProperties.getRefreshTokenExpiration()
         );
     }
@@ -70,20 +70,20 @@ public class JwtTokenProvider {
     }
 
     public Long getUserIdFromAccessToken(String token) {
-        Claims claims = parseToken(token, jwtProperties.getAccsecret());
+        Claims claims = parseToken(token, jwtProperties.getAccessTokenSecret());
         return claims.get(CLAIM_USER_ID, Long.class);
     }
 
     public boolean validateAccessToken(String token) {
-        return validateToken(token, jwtProperties.getAccsecret(), TOKEN_TYPE_ACCESS);
+        return validateToken(token, jwtProperties.getAccessTokenSecret(), TOKEN_TYPE_ACCESS);
     }
 
     public boolean validateRefreshToken(String token) {
-        return validateToken(token, jwtProperties.getRefsecret(), TOKEN_TYPE_REFRESH);
+        return validateToken(token, jwtProperties.getRefreshTokenSecret(), TOKEN_TYPE_REFRESH);
     }
 
     public Long getUserIdFromRefreshToken(String token) {
-        Claims claims = parseToken(token, jwtProperties.getRefsecret());
+        Claims claims = parseToken(token, jwtProperties.getRefreshTokenSecret());
         return claims.get(CLAIM_USER_ID, Long.class);
     }
 

@@ -1,5 +1,6 @@
 package com.newleaseonlife.SafeDogBe.global.security;
 
+import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 
 import jakarta.servlet.FilterChain;
@@ -37,13 +38,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (StringUtils.hasText(token) && jwtTokenProvider.validateAccessToken(token)) {
             Long userId = jwtTokenProvider.getUserIdFromAccessToken(token);
-            userRepository.findById(userId).ifPresent(user -> {
-                CustomPrincipal principal = new CustomPrincipal(user, Collections.emptyMap());
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(authentication);
-                log.debug("[JwtAuthenticationFilter] 인증 성공 userId={}", userId);
-            });
+            userRepository.findById(userId)
+                    .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                    .ifPresent(user -> {
+                        CustomPrincipal principal = new CustomPrincipal(user, Collections.emptyMap());
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                        log.debug("[JwtAuthenticationFilter] 인증 성공 userId={}", userId);
+                    });
         }
 
         filterChain.doFilter(request, response);
