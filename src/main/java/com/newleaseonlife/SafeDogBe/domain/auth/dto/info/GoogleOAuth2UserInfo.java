@@ -27,7 +27,9 @@ public class GoogleOAuth2UserInfo implements OAuth2UserInfo {
 
     @Override
     public String getName() {
-        return (String) attributes.get("name");
+        String name = (String) attributes.get("name");
+        // Google이 name을 제공하지 않는 경우 sub(providerId) 기반 닉네임으로 폴백
+        return name != null ? name : getProviderId();
     }
 
     @Override

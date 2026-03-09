@@ -121,6 +121,7 @@ public class AuthService {
             throw new BusinessException(AuthErrorCode.LOGIN_FAILED);
         }
 
+        user.updateLastLogin("LOCAL");
         return issueTokenResponse(user);
     }
 

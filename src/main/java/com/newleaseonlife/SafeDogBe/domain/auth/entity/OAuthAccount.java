@@ -8,9 +8,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -26,12 +28,15 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
         name = "oauth_accounts",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"provider", "provider_id"})
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_oauth_accounts_provider_provider_id",
+                columnNames = {"provider", "provider_id"}
+        )
 )
 @Getter
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class OAuthAccount {
 
     @Id
@@ -39,6 +44,7 @@ public class OAuthAccount {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_oauth_accounts_user"))
     private User user;
 
     @Enumerated(EnumType.STRING)
