@@ -42,6 +42,7 @@ public class UserTerm {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** 동의한 회원 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "user_id",
@@ -50,6 +51,7 @@ public class UserTerm {
     )
     private User user;
 
+    /** 대상 약관 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "term_id",
@@ -58,9 +60,11 @@ public class UserTerm {
     )
     private Term term;
 
+    /** 동의 여부. 기본값 false */
     @Column(nullable = false)
     private boolean agreed = false;
 
+    /** 동의 시각. 동의 시에만 기록 */
     @Column(name = "agreed_at")
     private LocalDateTime agreedAt;
 

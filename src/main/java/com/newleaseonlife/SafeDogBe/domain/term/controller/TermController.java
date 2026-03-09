@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/** 약관 API. 전체 약관 목록, 내 동의 현황, 약관 일괄 동의. */
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/terms")
 @RequiredArgsConstructor
@@ -29,12 +32,14 @@ public class TermController {
 
     private final TermService termService;
 
+    /** 전체 약관 목록 조회 */
     @GetMapping
     public ResponseEntity<List<TermResponse>> getTerms() {
         log.info("[TermController] 약관 목록 조회");
         return ResponseEntity.ok(termService.getAllTerms());
     }
 
+    /** 내 약관 동의 현황 조회 */
     @GetMapping("/my")
     public ResponseEntity<List<UserTermResponse>> getMyTerms(
             @AuthenticationPrincipal CustomPrincipal principal) {
@@ -42,6 +47,7 @@ public class TermController {
         return ResponseEntity.ok(termService.getUserTerms(principal.getUser().getId()));
     }
 
+    /** 약관 일괄 동의. 필수 약관 포함 검증 후 저장 */
     @PostMapping("/agree")
     public ResponseEntity<List<UserTermResponse>> agreeTerms(
             @AuthenticationPrincipal CustomPrincipal principal,
