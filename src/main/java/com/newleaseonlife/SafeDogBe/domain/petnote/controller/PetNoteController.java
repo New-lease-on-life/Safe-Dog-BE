@@ -15,6 +15,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -33,6 +34,7 @@ import java.util.List;
  * 소유권 검증은 서비스 계층에서 수행(해당 Pet의 소유자만 조회·생성·수정·삭제 가능).
  */
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/pet-notes")
 @RequiredArgsConstructor
