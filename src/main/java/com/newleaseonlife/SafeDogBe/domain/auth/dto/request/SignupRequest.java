@@ -3,6 +3,7 @@ package com.newleaseonlife.SafeDogBe.domain.auth.dto.request;
 import com.newleaseonlife.SafeDogBe.domain.term.dto.request.TermAgreementRequest;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
@@ -21,6 +22,7 @@ import java.util.List;
 @Builder
 public class SignupRequest {
 
+    @Email(message = "올바른 이메일 형식이어야 합니다.")
     @NotBlank(message = "이메일은 필수입니다.")
     private String email;
 

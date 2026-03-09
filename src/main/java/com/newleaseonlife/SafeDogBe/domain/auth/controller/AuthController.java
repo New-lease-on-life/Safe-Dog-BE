@@ -18,8 +18,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
+@Validated
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -50,7 +53,7 @@ public class AuthController {
     public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
         log.info("[AuthController] signup 요청 email={}, nickname={}", request.getEmail(), request.getNickname());
         authService.signup(request);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     /**
@@ -100,7 +103,7 @@ public class AuthController {
         String refreshToken = resolveRefreshToken(httpRequest, request);
         authService.logout(refreshToken);
         cookieUtils.deleteTokenCookies(httpResponse);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     /**
