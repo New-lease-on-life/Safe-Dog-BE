@@ -64,6 +64,7 @@ public class SecurityConfig {
                                 "/api/auth/check-duplicate", "/login/**", "/oauth2/**").permitAll()
                         .requestMatchers("/api/terms", "/api/users/check-nickname", "/api/users/restore").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll() // 헬스 체크, 프로메테우스
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2
