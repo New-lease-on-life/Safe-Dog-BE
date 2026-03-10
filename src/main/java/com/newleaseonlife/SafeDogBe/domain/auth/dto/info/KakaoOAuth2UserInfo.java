@@ -1,5 +1,6 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.dto.info;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
@@ -36,6 +37,22 @@ public class KakaoOAuth2UserInfo implements OAuth2UserInfo {
             return (String) profile.get("nickname");
         }
         return "Unknown_Kakao";
+    }
+
+    @Override
+    public LocalDate getBirthDate() {
+        if (kakaoAccount == null) return null;
+        String birthyear = (String) kakaoAccount.get("birthyear");
+        String birthday = (String) kakaoAccount.get("birthday");
+        if (birthyear == null || birthday == null || birthday.length() != 4) return null;
+        try {
+            int y = Integer.parseInt(birthyear);
+            int m = Integer.parseInt(birthday.substring(0, 2));
+            int d = Integer.parseInt(birthday.substring(2, 4));
+            return LocalDate.of(y, m, d);
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
     @Override

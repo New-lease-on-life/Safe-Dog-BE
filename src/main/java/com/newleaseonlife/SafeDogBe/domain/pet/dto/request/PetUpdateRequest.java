@@ -36,6 +36,6 @@ public class PetUpdateRequest {
 
     private Boolean isNeutered;
 
-    @Size(max = 500)
+    /** 프로필 이미지 URL. Pet 엔티티가 TEXT 타입이므로 길이 제한 없음 */
     private String profileImageUrl;
 }

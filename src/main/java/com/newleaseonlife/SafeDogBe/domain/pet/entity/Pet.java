@@ -1,10 +1,13 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.entity;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
@@ -31,7 +34,9 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 반려동물 엔티티. 메인 보호자(user)와 보호자 목록(guardians)을 가짐.
@@ -79,6 +84,19 @@ public class Pet {
     @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
 
+    /**
+     * 질병 목록. 등록 시 질병별 CareTemplate 자동 생성에 사용.
+     * pet_diseases 별도 테이블에 저장. 비어있으면 질병 없음.
+     */
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(
+            name = "pet_diseases",
+            joinColumns = @JoinColumn(name = "pet_id", foreignKey = @ForeignKey(name = "fk_pet_diseases_pet"))
+    )
+    @Enumerated(EnumType.STRING)
+    @Column(name = "disease", length = 30, nullable = false)
+    private Set<PetDisease> diseases = new HashSet<>();
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -90,7 +108,7 @@ public class Pet {
 
     @Builder
     public Pet(User user, String name, String species, String breed, LocalDate birthDate,
-               Gender gender, boolean isNeutered, String profileImageUrl) {
+               Gender gender, boolean isNeutered, String profileImageUrl, Set<PetDisease> diseases) {
         this.user = user;
         this.name = name;
         this.species = species;
@@ -99,6 +117,7 @@ public class Pet {
         this.gender = gender;
         this.isNeutered = isNeutered;
         this.profileImageUrl = profileImageUrl;
+        if (diseases != null) this.diseases = diseases;
     }
 
     /** 정보 수정. null이 아닌 필드만 반영. updatedAt은 @LastModifiedDate가 자동 갱신 */

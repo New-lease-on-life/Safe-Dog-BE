@@ -22,4 +22,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 동일 전화번호+이름 조합 존재 여부. 본인인증 중복 가입 방지용 */
     boolean existsByPhoneAndName(String phone, String name);
+
+    /** 전화번호+이름으로 회원 조회. 중복 응답에 기존 소셜 타입 포함 시 사용 */
+    java.util.Optional<User> findByPhoneAndName(String phone, String name);
+
+    /** 이름으로 첫 번째 회원 조회. 소셜 로그인 시 동일 이름 기존 계정 감지용 (정확도 낮아 보조 수단으로만 사용) */
+    java.util.Optional<User> findFirstByName(String name);
 }

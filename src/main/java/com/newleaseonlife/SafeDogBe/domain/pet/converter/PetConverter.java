@@ -27,6 +27,7 @@ public class PetConverter {
                 .gender(pet.getGender())
                 .isNeutered(pet.isNeutered())
                 .profileImageUrl(pet.getProfileImageUrl())
+                .diseases(pet.getDiseases())
                 .createdAt(pet.getCreatedAt())
                 .updatedAt(pet.getUpdatedAt())
                 .build();

@@ -55,7 +55,8 @@ spring:
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: name, email
+            # birthyear, birthday: 만 14세 미만 가입 차단 검증용. 네이버 개발자 센터에서 해당 항목 동의 활성화 필요
+            scope: name, email, birthyear, birthday
             client-name: Naver
           kakao:
             client-id: ${OAUTH2_KAKAO_CLIENT_ID:***}
@@ -63,7 +64,8 @@ spring:
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-            scope: profile_nickname, account_email
+            # account_birthyear, account_birthday: 만 14세 미만 가입 차단 검증용. 카카오 앱 설정에서 해당 항목 동의 활성화 필요
+            scope: profile_nickname, account_email, account_birthyear, account_birthday
             client-name: Kakao
         provider:
           naver:

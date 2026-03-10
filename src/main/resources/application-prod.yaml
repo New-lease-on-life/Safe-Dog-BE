@@ -53,7 +53,8 @@ spring:
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: ${REDIRECT_URI_NAVER}
-            scope: name, email
+            # birthyear, birthday: 만 14세 미만 가입 차단 검증용. 네이버 개발자 센터에서 해당 항목 동의 활성화 필요
+            scope: name, email, birthyear, birthday
             client-name: Naver
           kakao:
             client-id: ${CLIENT_ID_KAKAO}
@@ -61,7 +62,8 @@ spring:
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
             redirect-uri: ${REDIRECT_URI_KAKAO}
-            scope: profile_nickname, account_email
+            # account_birthyear, account_birthday: 만 14세 미만 가입 차단 검증용. 카카오 앱 설정에서 해당 항목 동의 활성화 필요
+            scope: profile_nickname, account_email, account_birthyear, account_birthday
             client-name: Kakao
         provider:
           naver:
@@ -83,8 +85,8 @@ spring:
 jwt:
   access-token-secret: ${JWT_ACCSECRET}
   refresh-token-secret: ${JWT_REFSECRET}
-  access-token-expiration: 1800000      # 30분
-  refresh-token-expiration: 604800000   # 7일
+  access-token-expiration: 1800000       # 30분
+  refresh-token-expiration: 7776000000   # 90일 (90 * 24 * 60 * 60 * 1000)
 
 # 로깅 설정
 logging:
@@ -110,6 +112,16 @@ cloud:
       static: ap-northeast-2 # 서울 리전
     s3:
       bucket: safedog-bucket # S3 버킷 이름
+
+# 앱 공통 설정
+app:
+  oauth2:
+    redirect-uri-after-login: ${OAUTH2_REDIRECT_URI_AFTER_LOGIN:/}  # 소셜 로그인 성공 후 이동할 프론트엔드 URL
+  cookie:
+    secure: true  # 운영(HTTPS) 환경
+  cors:
+    # 운영 환경 허용 Origin. AWS SSM 또는 환경변수로 쉼표 구분 문자열 설정 (예: "https://www.safedog.com,https://safedog.com")
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
 
 management:
   endpoints:
