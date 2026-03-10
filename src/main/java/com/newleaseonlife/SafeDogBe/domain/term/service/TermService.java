@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 약관 도메인 서비스. 전체 약관 목록 조회, 회원별 동의 현황 조회, 약관 일괄 동의 처리.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,17 +39,20 @@ public class TermService {
     private final UserRepository userRepository;
     private final TermConverter termConverter;
 
+    /** 전체 약관 목록 조회 (관리용·회원가입 시 약관 노출용) */
     public List<TermResponse> getAllTerms() {
         log.debug("[TermService] getAllTerms");
         return termConverter.toTermResponseList(termRepository.findAll());
     }
 
+    /** 해당 회원의 약관별 동의 현황 조회 */
     public List<UserTermResponse> getUserTerms(Long userId) {
         log.debug("[TermService] getUserTerms userId={}", userId);
         List<UserTerm> userTerms = userTermRepository.findAllByUserId(userId);
         return termConverter.toUserTermResponseList(userTerms);
     }
 
+    /** 약관 일괄 동의. 필수 약관 미동의 시 REQUIRED_TERM_NOT_AGREED. 기존 UserTerm은 update, 없으면 생성 */
     @Transactional
     public List<UserTermResponse> agreeTerms(Long userId, TermAgreementListRequest request) {
         log.info("[TermService] agreeTerms userId={}", userId);

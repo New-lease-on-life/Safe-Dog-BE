@@ -9,9 +9,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/** Term·UserTerm 엔티티를 응답 DTO로 변환. */
 @Component
 public class TermConverter {
 
+    /** Term → TermResponse */
     public TermResponse toTermResponse(Term term) {
         return new TermResponse(
                 term.getId(),
@@ -20,12 +22,14 @@ public class TermConverter {
         );
     }
 
+    /** Term 목록 → TermResponse 목록 */
     public List<TermResponse> toTermResponseList(List<Term> terms) {
         return terms.stream()
                 .map(this::toTermResponse)
                 .toList();
     }
 
+    /** UserTerm → UserTermResponse */
     public UserTermResponse toUserTermResponse(UserTerm userTerm) {
         return new UserTermResponse(
                 userTerm.getTerm().getId(),
@@ -36,6 +40,7 @@ public class TermConverter {
         );
     }
 
+    /** UserTerm 목록 → UserTermResponse 목록 */
     public List<UserTermResponse> toUserTermResponseList(List<UserTerm> userTerms) {
         return userTerms.stream()
                 .map(this::toUserTermResponse)
