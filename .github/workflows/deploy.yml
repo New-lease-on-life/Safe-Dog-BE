@@ -1,0 +1,70 @@
+# .github/workflows/deploy.yml
+name: Deploy Spring Boot to EC2
+
+on:
+  push:
+    branches: [ "main" ] # main 브랜치 푸시 시 자동 실행
+
+permissions:
+  id-token: write # OIDC 인증 필수
+  contents: read
+
+env:
+  ECR_REPOSITORY: safe_dog-api
+  # [수정] 위에서 만든 GitHub Actions용 IAM 역할의 ARN 입력
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (본인 버전에 맞게 수정)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.IAM_ROLE_ARN }}
+          aws-region: ap-northeast-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push Docker Image (Jib 사용)
+        run: |
+          ./gradlew jib \
+            -Djib.to.image=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }} \
+            -Djib.to.tags=latest
+
+      - name: Trigger EC2 Deploy Script via SSM
+        run: |
+          # [수정] 대상 EC2 인스턴스 ID를 GitHub Secrets에 저장 후 가져오기
+          INSTANCE_ID="${{ secrets.EC2_INSTANCE_ID }}"
+          
+          # EC2 서버 내부의 deploy.sh 스크립트 실행 명령을 SSM으로 전송
+          COMMAND="bash /home/ubuntu/cicd/deploy.sh"
+          
+          echo "Sending deployment command to EC2 via SSM..."
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --targets "Key=InstanceIds,Values=$INSTANCE_ID" \
+            --parameters "commands=[$COMMAND]" \
+            --comment "Trigger Deploy Script" \
+            --query "Command.CommandId" \
+            --output text)
+          
+          echo "Command ID: $COMMAND_ID"
+          
+          # 배포 스크립트가 성공적으로 끝날 때까지 대기 (실패 시 CI 파이프라인도 실패 처리)
+          echo "Waiting for command to complete..."
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID"
+          
+          echo "Deployment command executed successfully!"

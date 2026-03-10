@@ -3,9 +3,11 @@
 ################################
 
 spring:
-  application:
-    name:
-
+  config:
+    activate:
+      on-profile: prod
+    # 운영 프로필(prod)이 활성화될 때만 AWS SSM에서 파라미터를 가져옴
+    import: "aws-parameterstore:/safedog/prod/"
   # 1. 데이터베이스 설정
   datasource:
     url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useSSL=false&allowPublicKeyRetrieval=true
@@ -30,9 +32,8 @@ spring:
   # 3. Redis 설정
   data:
     redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD}
+      host: redis
+      port: 6379
 
   # 4. OAuth2 설정
   security:
@@ -80,8 +81,8 @@ spring:
 
 # JWT 설정
 jwt:
-  accsecret: ${JWT_ACCSECRET}
-  refsecret: ${JWT_REFSECRET}
+  access-token-secret: ${JWT_ACCSECRET}
+  refresh-token-secret: ${JWT_REFSECRET}
   access-token-expiration: 1800000      # 30분
   refresh-token-expiration: 604800000   # 7일
 
@@ -102,3 +103,21 @@ server:
       charset: UTF-8
       enabled: true
       force: true
+
+cloud:
+  aws:
+    region:
+      static: ap-northeast-2 # 서울 리전
+    s3:
+      bucket: safedog-bucket # S3 버킷 이름
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # health: 무중단 배포 스크립트(deploy.sh)가 살아있는지 확인할 때 사용
+        # prometheus: 프로메테우스가 메트릭을 수집할 때 사용
+        include: health, prometheus
+  metrics:
+    tags:
+      application: SafeDogBe
