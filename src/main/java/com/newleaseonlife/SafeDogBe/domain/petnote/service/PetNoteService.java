@@ -110,9 +110,12 @@ public class PetNoteService {
                 });
     }
 
-    /** 해당 반려동물이 현재 사용자 소유인지 검증. 아니면 PET_NOT_FOUND 또는 PET_ACCESS_DENIED */
+    /**
+     * 해당 반려동물이 현재 사용자 소유인지 검증.
+     * PetNote.pet은 nullable=false이므로 petId는 항상 non-null.
+     * 소유자가 아니면 PET_NOT_FOUND 또는 PET_ACCESS_DENIED.
+     */
     private void ensurePetOwnership(Long petId, Long userId) {
-        if (petId == null) return;
         if (!petRepository.existsByIdAndUserId(petId, userId)) {
             if (petRepository.findById(petId).isEmpty()) {
                 throw new BusinessException(PetErrorCode.PET_NOT_FOUND);

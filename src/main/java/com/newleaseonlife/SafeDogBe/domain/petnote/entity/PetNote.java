@@ -10,6 +10,7 @@ import jakarta.persistence.ForeignKey;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -25,7 +26,13 @@ import java.time.LocalDate;
  * 날짜별 반려동물 기록 (반려노트). Pet 1 : N PetNote.
  */
 @Entity
-@Table(name = "pet_notes")
+@Table(
+        name = "pet_notes",
+        indexes = {
+                @Index(name = "idx_pet_notes_pet_id", columnList = "pet_id"),
+                @Index(name = "idx_pet_notes_pet_id_note_date", columnList = "pet_id, note_date")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PetNote extends BaseTimeEntity {
