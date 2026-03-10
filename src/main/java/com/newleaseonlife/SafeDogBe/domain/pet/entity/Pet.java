@@ -29,7 +29,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime; // createdAt, updatedAt 필드 타입
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -75,14 +75,17 @@ public class Pet {
     @Column(nullable = false)
     private boolean isNeutered = false;
 
-    @Column(length = 500)
+    /** 프로필 이미지 URL. S3 URL 길이 대비 TEXT 타입 (User.profileImageUrl과 동일) */
+    @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** 수정 일시. JPA Auditing 자동 갱신 */
     @LastModifiedDate
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     @Builder
