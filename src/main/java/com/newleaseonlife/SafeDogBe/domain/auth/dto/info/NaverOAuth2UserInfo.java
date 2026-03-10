@@ -2,6 +2,7 @@ package com.newleaseonlife.SafeDogBe.domain.auth.dto.info;
 
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @SuppressWarnings("unchecked")
@@ -39,6 +40,23 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
         String name = (String) response.get("name");
         // Naver가 name을 제공하지 않는 경우 providerId 기반 닉네임으로 폴백
         return name != null ? name : getProviderId();
+    }
+
+    @Override
+    public LocalDate getBirthDate() {
+        String birthyear = (String) response.get("birthyear");
+        String birthday = (String) response.get("birthday");
+        if (birthyear == null || birthday == null) return null;
+        try {
+            int y = Integer.parseInt(birthyear);
+            String[] parts = birthday.split("-");
+            if (parts.length != 2) return null;
+            int m = Integer.parseInt(parts[0]);
+            int d = Integer.parseInt(parts[1]);
+            return LocalDate.of(y, m, d);
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
     @Override

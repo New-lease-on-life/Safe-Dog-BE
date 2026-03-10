@@ -18,7 +18,9 @@ public enum UserErrorCode implements ApiCode {
     /** 탈퇴 후 30일 초과 시 복구 불가 */
     RESTORE_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, 400, "탈퇴 후 30일이 지나 복구할 수 없습니다."),
     /** 복구 불가 상태(이미 정상 계정이거나 탈퇴 전이 아님) */
-    CANNOT_RESTORE(HttpStatus.BAD_REQUEST, 400, "복구할 수 있는 상태가 아닙니다.");
+    CANNOT_RESTORE(HttpStatus.BAD_REQUEST, 400, "복구할 수 있는 상태가 아닙니다."),
+    /** 반려동물 OWNER 권한이 있는 상태에서 탈퇴 시도. 권한 위임 후 재시도 필요 */
+    CANNOT_WITHDRAW_AS_OWNER(HttpStatus.BAD_REQUEST, 400, "반려동물 소유자 권한을 다른 보호자에게 위임한 후 탈퇴할 수 있습니다.");
 
     private final HttpStatus httpStatus;
     private final Integer code;

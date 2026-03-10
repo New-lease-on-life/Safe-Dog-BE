@@ -7,6 +7,7 @@ import com.newleaseonlife.SafeDogBe.global.security.OAuth2LoginSuccessHandler;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,12 +36,16 @@ public class SecurityConfig {
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
 
-    /** CORS 설정. 쿠키 인증 허용, 로컬 개발 Origin 및 허용 메서드/헤더 정의. */
+    /** 허용 CORS Origin 목록. 환경별 application.yaml의 app.cors.allowed-origins에서 주입. */
+    @Value("${app.cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
+    /** CORS 설정. 쿠키 인증 허용, app.cors.allowed-origins 기반 Origin 허용. */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000", "http://127.0.0.1:5173"));
+        config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setMaxAge(3600L);
@@ -61,8 +66,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout",
-                                "/api/auth/check-duplicate", "/login/**", "/oauth2/**").permitAll()
+                                "/api/auth/check-duplicate", "/api/auth/devices/**",
+                                "/login/**", "/oauth2/**").permitAll()
                         .requestMatchers("/api/terms", "/api/users/check-nickname", "/api/users/restore").permitAll()
+                        .requestMatchers("/api/invites/*/join").authenticated() // 참여는 인증 필요
+                        .requestMatchers("/api/invites/**").permitAll() // 초대 정보 조회는 비인증 허용
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll() // 헬스 체크, 프로메테우스
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

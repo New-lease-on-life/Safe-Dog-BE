@@ -23,6 +23,7 @@ public class UserConverter {
                 .profileImageUrl(user.getProfileImageUrl())
                 .role(user.getRole())
                 .isOnboardingCompleted(user.isOnboardingCompleted())
+                .lastSelectedPetId(user.getLastSelectedPetId())
                 .build();
     }
 }

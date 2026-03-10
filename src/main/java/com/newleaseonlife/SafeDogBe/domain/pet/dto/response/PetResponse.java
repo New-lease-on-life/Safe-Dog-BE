@@ -1,6 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.dto.response;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 /**
  * 반려동물 응답. 조회·등록·수정 API 응답에 사용.
@@ -31,6 +33,8 @@ public class PetResponse {
     /** 중성화 여부 */
     private boolean isNeutered;
     private String profileImageUrl;
+    /** 질병 목록. 등록된 질병이 없으면 빈 Set */
+    private Set<PetDisease> diseases;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

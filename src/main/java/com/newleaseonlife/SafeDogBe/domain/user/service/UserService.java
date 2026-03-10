@@ -1,5 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.user.service;
 
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetGuardianRole;
+import com.newleaseonlife.SafeDogBe.domain.pet.repository.PetGuardianRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.converter.UserConverter;
 import com.newleaseonlife.SafeDogBe.domain.user.dto.request.UserUpdateRequest;
 import com.newleaseonlife.SafeDogBe.domain.user.dto.response.UserResponse;
@@ -37,6 +39,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserConverter userConverter;
     private final PasswordEncoder passwordEncoder;
+    private final PetGuardianRepository petGuardianRepository;
 
     /** ID로 회원 조회. 없으면 USER_NOT_FOUND */
     public UserResponse findById(Long userId) {
@@ -70,11 +73,13 @@ public class UserService {
                     return new BusinessException(UserErrorCode.USER_NOT_FOUND);
                 });
 
-        if (request.nickname() != null && !request.nickname().equals(user.getNickname())) {
-            checkNicknameDuplicate(request.nickname());
+        // 닉네임 정규화: 영문 대문자 → 소문자, 앞뒤 공백 제거
+        String normalizedNickname = request.nickname() != null ? request.nickname().trim().toLowerCase() : null;
+        if (normalizedNickname != null && !normalizedNickname.equals(user.getNickname())) {
+            checkNicknameDuplicate(normalizedNickname);
         }
 
-        user.updateProfile(request.name(), request.nickname(), request.profileImageUrl());
+        user.updateProfile(request.name(), normalizedNickname, request.profileImageUrl());
         log.info("[UserService] updateProfile 완료 userId={}", userId);
         return userConverter.toResponse(user);
     }
@@ -91,7 +96,9 @@ public class UserService {
     }
 
     /**
-     * 전화번호 + 이름 기준 중복 여부 검사. 중복이면 BusinessException(ALREADY_REGISTERED_PHONE_NAME) 발생.
+     * 전화번호 + 이름 기준 중복 여부 검사.
+     * 중복이면 기존 계정의 소셜 타입을 포함한 메시지로 ALREADY_REGISTERED_PHONE_NAME 예외 발생.
+     * 예: "카카오로 가입된 계정이 있어요. 카카오로 로그인해 주세요."
      */
     public void checkDuplicateByPhoneAndName(String phone, String name) {
         if (phone == null || phone.isBlank() || name == null || name.isBlank()) {
@@ -99,10 +106,24 @@ public class UserService {
         }
         String p = phone.trim();
         String n = name.trim();
-        if (userRepository.existsByPhoneAndName(p, n)) {
+        userRepository.findByPhoneAndName(p, n).ifPresent(existing -> {
             log.info("[UserService] 전화번호+이름 중복 감지 phone={}, name={}", p, n);
-            throw new BusinessException(UserErrorCode.ALREADY_REGISTERED_PHONE_NAME);
-        }
+            String providerDesc = existing.getProviderType() != null
+                    ? existing.getProviderType().getDescription()
+                    : "기존 계정";
+            String detail = providerDesc + "로 가입된 계정이 있어요. " + providerDesc + "로 로그인해 주세요.";
+            throw new BusinessException(UserErrorCode.ALREADY_REGISTERED_PHONE_NAME, detail);
+        });
+    }
+
+    /** 마지막으로 선택한 반려동물 ID 갱신. 다음 접속 시 기본 반려동물로 내려줌. petId = null이면 선택 해제 */
+    @Transactional
+    public UserResponse updateLastSelectedPet(Long userId, Long petId) {
+        log.info("[UserService] updateLastSelectedPet userId={}, petId={}", userId, petId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+        user.updateLastSelectedPet(petId);
+        return userConverter.toResponse(user);
     }
 
     /** 온보딩 완료 처리. isOnboardingCompleted = true 로 갱신 후 응답 DTO 반환 */
@@ -119,7 +140,8 @@ public class UserService {
         return userConverter.toResponse(user);
     }
 
-    /** 회원 탈퇴(Soft Delete). status = WITHDRAWN, withdrawnAt 기록. 30일 내 복구 가능, 기록 1년 보관 */
+    /** 회원 탈퇴(Soft Delete). status = WITHDRAWN, withdrawnAt 기록. 30일 내 복구 가능, 기록 1년 보관.
+     *  OWNER 권한인 반려동물이 있으면 권한 위임 전까지 탈퇴 불가 */
     @Transactional
     public void withdraw(Long userId) {
         log.info("[UserService] withdraw userId={}", userId);
@@ -128,6 +150,10 @@ public class UserService {
                     log.warn("[UserService] withdraw 실패 - 사용자 없음 userId={}", userId);
                     return new BusinessException(UserErrorCode.USER_NOT_FOUND);
                 });
+        if (petGuardianRepository.existsByUser_IdAndRole(userId, PetGuardianRole.OWNER)) {
+            log.warn("[UserService] withdraw 실패 - OWNER 권한 위임 전 탈퇴 불가 userId={}", userId);
+            throw new BusinessException(UserErrorCode.CANNOT_WITHDRAW_AS_OWNER);
+        }
         user.withdraw();
         log.info("[UserService] withdraw 완료 userId={}, withdrawnAt={}", userId, user.getWithdrawnAt());
     }

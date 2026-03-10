@@ -12,7 +12,4 @@ public interface OAuthAccountRepository extends JpaRepository<OAuthAccount, Long
 
     /** provider + providerId로 조회. 소셜 로그인 시 기존 계정 확인용 */
     Optional<OAuthAccount> findByProviderAndProviderId(OAuthProvider provider, String providerId);
-
-    /** userId로 조회. 연동된 소셜 계정 확인용 */
-    Optional<OAuthAccount> findByUserId(Long userId);
 }

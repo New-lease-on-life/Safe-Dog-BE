@@ -1,5 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.service;
 
+import com.newleaseonlife.SafeDogBe.domain.care.entity.CareTemplate;
+import com.newleaseonlife.SafeDogBe.domain.care.repository.CareTemplateRepository;
 import com.newleaseonlife.SafeDogBe.domain.pet.dto.request.GuardianAddRequest;
 import com.newleaseonlife.SafeDogBe.domain.pet.dto.request.PetCreateRequest;
 import com.newleaseonlife.SafeDogBe.domain.pet.dto.request.PetUpdateRequest;
@@ -7,6 +9,7 @@ import com.newleaseonlife.SafeDogBe.domain.pet.dto.response.PetGuardianResponse;
 import com.newleaseonlife.SafeDogBe.domain.pet.dto.response.PetResponse;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.Pet;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.PetGuardian;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
 import com.newleaseonlife.SafeDogBe.domain.pet.converter.PetConverter;
 import com.newleaseonlife.SafeDogBe.domain.pet.repository.PetGuardianRepository;
 import com.newleaseonlife.SafeDogBe.domain.pet.repository.PetRepository;
@@ -22,7 +25,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 반려동물(Pet) 도메인 서비스. CRUD, 보호자(Guardian) 추가·삭제·목록 조회.
@@ -37,6 +42,7 @@ public class PetService {
     private final PetRepository petRepository;
     private final PetGuardianRepository petGuardianRepository;
     private final UserRepository userRepository;
+    private final CareTemplateRepository careTemplateRepository;
     private final PetConverter petConverter;
 
     /** 내가 소유한 반려동물 목록(최신순) */
@@ -49,17 +55,10 @@ public class PetService {
     /** 반려동물 단건 조회. 소유자만 조회 가능(보호자 목록 포함 조회는 getGuardians 사용) */
     public PetResponse findById(Long petId, Long userId) {
         log.debug("[PetService] findById petId={}, userId={}", petId, userId);
-        Pet pet = petRepository.findByIdAndUserId(petId, userId)
-                .orElseThrow(() -> {
-                    if (petRepository.findById(petId).isEmpty()) {
-                        return new BusinessException(PetErrorCode.PET_NOT_FOUND);
-                    }
-                    return new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
-                });
-        return petConverter.toResponse(pet);
+        return petConverter.toResponse(getPetAsOwnerOrThrow(petId, userId));
     }
 
-    /** 반려동물 등록. 요청자를 메인 보호자(pet.user)로 저장 */
+    /** 반려동물 등록. 요청자를 메인 보호자(pet.user)로 저장. 질병 입력 시 질병별 CareTemplate 자동 생성 */
     @Transactional
     public PetResponse create(Long userId, PetCreateRequest request) {
         log.info("[PetService] create userId={}, name={}", userId, request.getName());
@@ -67,6 +66,7 @@ public class PetService {
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
         boolean isNeutered = request.getIsNeutered() != null && request.getIsNeutered();
+        Set<PetDisease> diseases = request.getDiseases() != null ? request.getDiseases() : Set.of();
         Pet pet = Pet.builder()
                 .user(user)
                 .name(request.getName())
@@ -76,24 +76,42 @@ public class PetService {
                 .gender(request.getGender())
                 .isNeutered(isNeutered)
                 .profileImageUrl(request.getProfileImageUrl())
+                .diseases(diseases)
                 .build();
         petRepository.save(pet);
-        log.info("[PetService] create 완료 petId={}", pet.getId());
+
+        // 질병 유형별 기본 케어 템플릿 자동 생성
+        if (!diseases.isEmpty()) {
+            createDefaultCareTemplates(pet, diseases);
+        }
+
+        log.info("[PetService] create 완료 petId={}, diseases={}", pet.getId(), diseases);
         return petConverter.toResponse(pet);
+    }
+
+    /** 질병 목록을 기반으로 PetDisease에 정의된 기본 CareTemplate 일괄 생성 */
+    private void createDefaultCareTemplates(Pet pet, Set<PetDisease> diseases) {
+        List<CareTemplate> templates = new ArrayList<>();
+        for (PetDisease disease : diseases) {
+            for (PetDisease.DefaultTemplate tmpl : disease.getDefaultTemplates()) {
+                templates.add(CareTemplate.builder()
+                        .pet(pet)
+                        .careType(tmpl.careType())
+                        .title("[" + disease.getDescription() + "] " + tmpl.title())
+                        .content(tmpl.content())
+                        .repeatCycle(tmpl.repeatCycle())
+                        .build());
+            }
+        }
+        careTemplateRepository.saveAll(templates);
+        log.info("[PetService] 질병 기반 CareTemplate {}개 자동 생성 petId={}", templates.size(), pet.getId());
     }
 
     /** 반려동물 정보 수정. 소유자만 가능 */
     @Transactional
     public PetResponse update(Long petId, Long userId, PetUpdateRequest request) {
         log.info("[PetService] update petId={}, userId={}", petId, userId);
-        Pet pet = petRepository.findByIdAndUserId(petId, userId)
-                .orElseThrow(() -> {
-                    if (petRepository.findById(petId).isEmpty()) {
-                        return new BusinessException(PetErrorCode.PET_NOT_FOUND);
-                    }
-                    return new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
-                });
-
+        Pet pet = getPetAsOwnerOrThrow(petId, userId);
         pet.update(
                 request.getName(),
                 request.getSpecies(),
@@ -111,13 +129,8 @@ public class PetService {
     @Transactional
     public void delete(Long petId, Long userId) {
         log.info("[PetService] delete petId={}, userId={}", petId, userId);
-        if (!petRepository.existsByIdAndUserId(petId, userId)) {
-            if (petRepository.findById(petId).isEmpty()) {
-                throw new BusinessException(PetErrorCode.PET_NOT_FOUND);
-            }
-            throw new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
-        }
-        petRepository.deleteById(petId);
+        Pet pet = getPetAsOwnerOrThrow(petId, userId);
+        petRepository.delete(pet);
         log.info("[PetService] delete 완료 petId={}", petId);
     }
 

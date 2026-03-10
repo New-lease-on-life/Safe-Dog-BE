@@ -4,10 +4,17 @@ import com.newleaseonlife.SafeDogBe.domain.auth.converter.AuthConverter;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.LoginRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.RefreshTokenRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SignupRequest;
+import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SocialLinkRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
+import com.newleaseonlife.SafeDogBe.domain.auth.entity.OAuthAccount;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.RefreshToken;
+import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.OAuthProvider;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
+import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.DeviceLoginProviderResponse;
+import com.newleaseonlife.SafeDogBe.domain.auth.entity.UserDevice;
+import com.newleaseonlife.SafeDogBe.domain.auth.repository.OAuthAccountRepository;
 import com.newleaseonlife.SafeDogBe.domain.auth.repository.RefreshTokenRepository;
+import com.newleaseonlife.SafeDogBe.domain.auth.repository.UserDeviceRepository;
 import com.newleaseonlife.SafeDogBe.domain.term.dto.request.TermAgreementRequest;
 import com.newleaseonlife.SafeDogBe.domain.term.entity.Term;
 import com.newleaseonlife.SafeDogBe.domain.term.entity.UserTerm;
@@ -29,7 +36,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -43,11 +52,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AuthService {
 
-    /** Refresh Token DB 보관 기간(일). JwtProperties.refreshTokenExpiration과 맞춰야 함 */
-    private static final int REFRESH_TOKEN_VALID_DAYS = 7;
+    /** Refresh Token DB 보관 기간(일). JwtProperties.refreshTokenExpiration·CookieUtils.REFRESH_TOKEN_MAX_AGE_SECONDS와 맞춰야 함 */
+    private static final int REFRESH_TOKEN_VALID_DAYS = 90;
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final OAuthAccountRepository oAuthAccountRepository;
+    private final UserDeviceRepository userDeviceRepository;
     private final TermRepository termRepository;
     private final UserTermRepository userTermRepository;
     private final JwtTokenProvider jwtTokenProvider;
@@ -62,15 +73,24 @@ public class AuthService {
             log.warn("[AuthService] signup 실패 - 이메일 중복 email={}", request.getEmail());
             throw new BusinessException(AuthErrorCode.EMAIL_DUPLICATION);
         }
-        if (userRepository.existsByNickname(request.getNickname())) {
-            log.warn("[AuthService] signup 실패 - 닉네임 중복 nickname={}", request.getNickname());
+        // 닉네임 정규화: 영문 대문자 → 소문자, 앞뒤 공백 제거
+        String normalizedNickname = request.getNickname().trim().toLowerCase();
+        if (userRepository.existsByNickname(normalizedNickname)) {
+            log.warn("[AuthService] signup 실패 - 닉네임 중복 nickname={}", normalizedNickname);
             throw new BusinessException(UserErrorCode.NICKNAME_DUPLICATION);
+        }
+        if (request.getBirthDate() != null) {
+            int age = Period.between(request.getBirthDate(), LocalDate.now()).getYears();
+            if (age < 14) {
+                log.warn("[AuthService] signup 실패 - 만 14세 미만 birthDate={}", request.getBirthDate());
+                throw new BusinessException(AuthErrorCode.UNDER_AGE);
+            }
         }
 
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .nickname(request.getNickname())
+                .nickname(normalizedNickname)
                 .birthDate(request.getBirthDate())
                 .status(UserStatus.ACTIVE)
                 .providerType(ProviderType.LOCAL)
@@ -81,7 +101,7 @@ public class AuthService {
         log.info("[AuthService] signup 완료 userId={}", user.getId());
     }
 
-    /** 필수 약관 동의 여부 검사 후 UserTerm 일괄 저장 */
+    /** termId 유효성 검증 → 필수 약관 동의 확인 → UserTerm 일괄 저장 */
     private void saveTermAgreements(User user, List<TermAgreementRequest> termRequests) {
         if (termRequests == null || termRequests.isEmpty()) {
             return;
@@ -89,6 +109,13 @@ public class AuthService {
         Map<Long, Boolean> agreementMap = termRequests.stream()
                 .collect(Collectors.toMap(TermAgreementRequest::termId, TermAgreementRequest::agreed));
 
+        // 1단계: 요청된 termId가 실제 존재하는지 먼저 검증
+        List<Term> allTerms = termRepository.findAllById(agreementMap.keySet());
+        if (allTerms.size() != agreementMap.size()) {
+            throw new BusinessException(TermErrorCode.TERM_NOT_FOUND);
+        }
+
+        // 2단계: 필수 약관이 모두 동의됐는지 확인
         List<Term> requiredTerms = termRepository.findAllByRequired(true);
         for (Term required : requiredTerms) {
             Boolean agreed = agreementMap.get(required.getId());
@@ -96,11 +123,6 @@ public class AuthService {
                 log.warn("[AuthService] 필수 약관 미동의 termId={}", required.getId());
                 throw new BusinessException(TermErrorCode.REQUIRED_TERM_NOT_AGREED);
             }
-        }
-
-        List<Term> allTerms = termRepository.findAllById(agreementMap.keySet());
-        if (allTerms.size() != agreementMap.size()) {
-            throw new BusinessException(TermErrorCode.TERM_NOT_FOUND);
         }
 
         List<UserTerm> userTerms = allTerms.stream()
@@ -200,6 +222,59 @@ public class AuthService {
 
         refreshTokenRepository.delete(storedToken);
         return issueTokenResponse(user);
+    }
+
+    /**
+     * 소셜 계정 연결. 이미 로그인된 사용자가 추가 소셜 계정을 연결.
+     * 동일 provider+providerId가 이미 존재하면 SOCIAL_ALREADY_LINKED 예외.
+     */
+    @Transactional
+    public void linkSocialAccount(Long userId, SocialLinkRequest request) {
+        log.info("[AuthService] linkSocialAccount userId={}, provider={}", userId, request.provider());
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        OAuthProvider provider = request.provider();
+        if (oAuthAccountRepository.findByProviderAndProviderId(provider, request.providerId()).isPresent()) {
+            log.warn("[AuthService] linkSocialAccount 실패 - 이미 연결된 소셜 provider={}, providerId={}", provider, request.providerId());
+            throw new BusinessException(AuthErrorCode.SOCIAL_ALREADY_LINKED);
+        }
+
+        OAuthAccount account = OAuthAccount.builder()
+                .user(user)
+                .provider(provider)
+                .providerId(request.providerId())
+                .build();
+        oAuthAccountRepository.save(account);
+        log.info("[AuthService] linkSocialAccount 완료 userId={}, provider={}", userId, provider);
+    }
+
+    /**
+     * 기기별 마지막 로그인 소셜 타입 기록. 로그인 성공 후 FE가 별도 호출.
+     * 기존 기기 기록이 있으면 갱신, 없으면 신규 생성.
+     */
+    @Transactional
+    public DeviceLoginProviderResponse registerDeviceLogin(String deviceId, String provider) {
+        log.info("[AuthService] registerDeviceLogin deviceId={}, provider={}", deviceId, provider);
+        UserDevice device = userDeviceRepository.findByDeviceId(deviceId)
+                .map(d -> {
+                    d.updateLoginInfo(provider);
+                    return d;
+                })
+                .orElseGet(() -> userDeviceRepository.save(
+                        UserDevice.builder().deviceId(deviceId).lastLoginProvider(provider).build()
+                ));
+        return new DeviceLoginProviderResponse(device.getDeviceId(), device.getLastLoginProvider(), device.getLastLoginAt());
+    }
+
+    /**
+     * 기기별 마지막 로그인 소셜 타입 조회. 비인증 공개 API.
+     * 등록된 기기 없으면 null 반환.
+     */
+    public DeviceLoginProviderResponse getDeviceLoginProvider(String deviceId) {
+        return userDeviceRepository.findByDeviceId(deviceId)
+                .map(d -> new DeviceLoginProviderResponse(d.getDeviceId(), d.getLastLoginProvider(), d.getLastLoginAt()))
+                .orElse(null);
     }
 
     /** 로그아웃. DB에서 Refresh Token 삭제. 쿠키 삭제는 컨트롤러에서 수행 */

@@ -22,7 +22,8 @@ public class CookieUtils {
     public static final String REFRESH_TOKEN_COOKIE = "refresh_token";
 
     private static final String REFRESH_TOKEN_PATH = "/api/auth/refresh";
-    private static final int    REFRESH_TOKEN_MAX_AGE_SECONDS = 14 * 24 * 60 * 60; // 14일
+    // AuthService.REFRESH_TOKEN_VALID_DAYS(7일)과 맞춤
+    private static final int    REFRESH_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7일
 
     @Value("${app.cookie.secure:false}")
     private boolean secure;

@@ -23,7 +23,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.Map;
 import java.util.UUID;
 
@@ -61,29 +62,94 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     private User saveOrUpdate(OAuth2UserInfo userInfo) {
         OAuthProvider provider = OAuthProvider.valueOf(userInfo.getProvider().toUpperCase());
 
+        // 1. 동일 provider + providerId로 기존 계정 조회 → 기존 회원이면 로그인
         User user = oauthAccountRepository.findByProviderAndProviderId(provider, userInfo.getProviderId())
                 .map(OAuthAccount::getUser)
                 .map(u -> {
                     log.debug("[CustomOAuth2UserService] 기존 OAuth 계정 로그인 userId={}", u.getId());
                     return u;
                 })
-                .orElseGet(() -> createUserAndOAuthAccount(userInfo, provider));
+                .orElseGet(() -> resolveNewSocialUser(userInfo, provider));
 
         user.updateLastLogin(provider.name());
         return user;
     }
 
-    private User createUserAndOAuthAccount(OAuth2UserInfo userInfo, OAuthProvider provider) {
+    /**
+     * 신규 소셜 로그인 처리.
+     * 이메일이 일치하는 기존 계정이 있으면 자동 연결(계정 통합).
+     * 없으면 신규 가입. 단, 동일 전화번호+이름 계정이 있으면 분기 오류 발생.
+     */
+    private User resolveNewSocialUser(OAuth2UserInfo userInfo, OAuthProvider provider) {
         String email = userInfo.getEmail();
+
+        // 2. 이메일 기반 기존 계정 조회 → 같은 이메일이 있으면 소셜 계정 자동 연결
+        if (email != null && !email.isBlank()) {
+            java.util.Optional<User> existingByEmail = userRepository.findByEmail(email);
+            if (existingByEmail.isPresent()) {
+                User existing = existingByEmail.get();
+                log.info("[CustomOAuth2UserService] 이메일 일치 → 기존 계정에 소셜 연결 userId={}, provider={}", existing.getId(), provider);
+                linkSocialAccount(existing, provider, userInfo.getProviderId());
+                return existing;
+            }
+        }
+
+        // 3. 14세 미만 가입 차단
+        LocalDate birthDate = userInfo.getBirthDate();
+        if (birthDate != null) {
+            int age = Period.between(birthDate, LocalDate.now()).getYears();
+            if (age < 14) {
+                log.warn("[CustomOAuth2UserService] 신규 가입 차단 - 만 14세 미만 provider={}, birthDate={}", provider, birthDate);
+                throw new OAuth2AuthenticationException("만 14세 이상만 가입할 수 있습니다.");
+            }
+        }
+
+        // 4. 전화번호+이름으로 다른 소셜 계정이 있으면 "동일계정존재" 분기
+        //    → 오류 코드를 "DUPLICATE_ACCOUNT:{기존provider}" 형식으로 전달. FE가 파싱해 계정 연결 안내
+        String name = userInfo.getName();
+        if (name != null && !name.isBlank()) {
+            userRepository.findFirstByName(name).ifPresent(existing -> {
+                // 이름만으로 부정확할 수 있으므로 providerType이 다를 때만 분기
+                if (existing.getProviderType() != null && !existing.getProviderType().name().equals(provider.name())) {
+                    log.warn("[CustomOAuth2UserService] 동일 이름 타 소셜 계정 감지 name={}, existingProvider={}, newProvider={}",
+                            name, existing.getProviderType(), provider);
+                    String existingDesc = existing.getProviderType().getDescription();
+                    throw new OAuth2AuthenticationException(
+                            "DUPLICATE_ACCOUNT:" + existing.getProviderType().name()
+                                    + "|" + existingDesc + "로 이미 가입된 계정이 있어요. " + existingDesc + "로 로그인하거나 계정을 연결해 주세요."
+                    );
+                }
+            });
+        }
+
+        // 5. 신규 가입
+        return createUserAndOAuthAccount(userInfo, provider, birthDate, email);
+    }
+
+    /** 기존 User에 새 소셜 OAuthAccount 연결 (계정 통합) */
+    private void linkSocialAccount(User user, OAuthProvider provider, String providerId) {
+        OAuthAccount newAccount = OAuthAccount.builder()
+                .user(user)
+                .provider(provider)
+                .providerId(providerId)
+                .build();
+        oauthAccountRepository.save(newAccount);
+        log.info("[CustomOAuth2UserService] 소셜 계정 연결 완료 userId={}, provider={}", user.getId(), provider);
+    }
+
+    private User createUserAndOAuthAccount(OAuth2UserInfo userInfo, OAuthProvider provider,
+                                           LocalDate birthDate, String email) {
         if (email == null || email.isBlank()) {
             email = userInfo.getProvider() + "_" + userInfo.getProviderId() + "@safedog.oauth";
         }
-        String nickname = userInfo.getName() + "_" + UUID.randomUUID().toString().substring(0, 6);
+        String nickname = (userInfo.getName() != null ? userInfo.getName() : "user")
+                + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
 
         User newUser = User.builder()
                 .email(email)
                 .nickname(nickname)
                 .name(userInfo.getName())
+                .birthDate(birthDate)
                 .status(UserStatus.ACTIVE)
                 .providerType(ProviderType.valueOf(userInfo.getProvider().toUpperCase()))
                 .build();
@@ -93,7 +159,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .user(newUser)
                 .provider(provider)
                 .providerId(userInfo.getProviderId())
-                .createdAt(LocalDateTime.now())
                 .build();
         oauthAccountRepository.save(newAccount);
         log.info("[CustomOAuth2UserService] 신규 OAuth 가입 완료 userId={}, provider={}", newUser.getId(), provider);

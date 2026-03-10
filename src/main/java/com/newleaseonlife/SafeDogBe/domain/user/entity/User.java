@@ -102,6 +102,9 @@ public class User {
     @Column(length = 20)
     private String lastLoginProvider;
 
+    /** 마지막으로 선택한 반려동물 ID. 다음 접속 시 기본 반려동물로 사용. null 이면 미선택 */
+    private Long lastSelectedPetId;
+
     /** 생성 일시. JPA Auditing 자동 기록, 수정 불가 */
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -175,5 +178,10 @@ public class User {
     public void updateLastLogin(String provider) {
         this.lastLoginAt = LocalDateTime.now();
         this.lastLoginProvider = provider;
+    }
+
+    /** 마지막으로 선택한 반려동물 ID 갱신. null 허용 (선택 해제) */
+    public void updateLastSelectedPet(Long petId) {
+        this.lastSelectedPetId = petId;
     }
 }

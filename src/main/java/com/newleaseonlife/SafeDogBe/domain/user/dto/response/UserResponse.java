@@ -38,4 +38,6 @@ public class UserResponse {
     private UserRole role;
     /** 온보딩 완료 여부. true이면 최초 설정 완료로 간주 */
     private boolean isOnboardingCompleted;
+    /** 마지막으로 선택한 반려동물 ID. null이면 미선택 */
+    private Long lastSelectedPetId;
 }
