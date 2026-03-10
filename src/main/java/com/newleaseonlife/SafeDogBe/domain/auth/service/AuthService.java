@@ -34,12 +34,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 인증 서비스. 회원가입·로그인·토큰 갱신·로그아웃 처리.
+ * 로컬(이메일+비밀번호) 로그인과 소셜(OAuth2) 로그인 공통으로 토큰 발급.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final int REFRESH_TOKEN_VALID_DAYS = 14;
+    /** Refresh Token DB 보관 기간(일). JwtProperties.refreshTokenExpiration과 맞춰야 함 */
+    private static final int REFRESH_TOKEN_VALID_DAYS = 7;
 
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -49,6 +54,7 @@ public class AuthService {
     private final AuthConverter authConverter;
     private final PasswordEncoder passwordEncoder;
 
+    /** 회원가입. 이메일·닉네임 중복 검사 → User 저장 → 약관 동의 저장 */
     @Transactional
     public void signup(SignupRequest request) {
         log.info("[AuthService] signup email={}, nickname={}", request.getEmail(), request.getNickname());
@@ -75,6 +81,7 @@ public class AuthService {
         log.info("[AuthService] signup 완료 userId={}", user.getId());
     }
 
+    /** 필수 약관 동의 여부 검사 후 UserTerm 일괄 저장 */
     private void saveTermAgreements(User user, List<TermAgreementRequest> termRequests) {
         if (termRequests == null || termRequests.isEmpty()) {
             return;
@@ -107,6 +114,10 @@ public class AuthService {
         log.info("[AuthService] 약관 동의 저장 완료 userId={}, count={}", user.getId(), userTerms.size());
     }
 
+    /**
+     * 로컬 로그인. 이메일로 유저 조회 → 비밀번호 검증 → 토큰 발급.
+     * 소셜 전용 계정(password=null)은 LOGIN_FAILED 처리.
+     */
     @Transactional
     public TokenResponse login(LoginRequest request) {
         log.info("[AuthService] login email={}", request.getEmail());
@@ -115,6 +126,12 @@ public class AuthService {
                     log.warn("[AuthService] login 실패 - 사용자 없음 email={}", request.getEmail());
                     return new BusinessException(AuthErrorCode.LOGIN_FAILED);
                 });
+
+        // 소셜 전용 계정(password null)이 로컬 로그인 시도 → NPE 방지 + 명시적 실패
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            log.warn("[AuthService] login 실패 - 소셜 전용 계정 userId={}", user.getId());
+            throw new BusinessException(AuthErrorCode.LOGIN_FAILED);
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.warn("[AuthService] login 실패 - 비밀번호 불일치 userId={}", user.getId());
@@ -125,6 +142,7 @@ public class AuthService {
         return issueTokenResponse(user);
     }
 
+    /** Access/Refresh Token 발급 + DB에 Refresh Token 저장(기존 토큰 삭제 후 재저장) */
     @Transactional
     public TokenResponse issueTokenResponse(User user) {
         log.debug("[AuthService] issueTokenResponse userId={}", user.getId());
@@ -152,6 +170,10 @@ public class AuthService {
         return authConverter.toTokenResponse(accessToken, refreshToken, accessTokenExpiresIn);
     }
 
+    /**
+     * Refresh Token으로 Access/Refresh Token 재발급.
+     * JWT 서명·만료 검증 → DB 존재 확인 → 만료 여부 확인 → 재발급.
+     */
     @Transactional
     public TokenResponse refresh(RefreshTokenRequest request) {
         log.info("[AuthService] refresh 요청");
@@ -166,6 +188,13 @@ public class AuthService {
                     return new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
                 });
 
+        // DB에 저장된 토큰이 만료됐으면 재발급 거부
+        if (storedToken.isExpired(LocalDateTime.now())) {
+            log.warn("[AuthService] refresh 실패 - DB 토큰 만료 userId={}", storedToken.getUserId());
+            refreshTokenRepository.delete(storedToken);
+            throw new BusinessException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
         User user = userRepository.findById(storedToken.getUserId())
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
@@ -173,6 +202,7 @@ public class AuthService {
         return issueTokenResponse(user);
     }
 
+    /** 로그아웃. DB에서 Refresh Token 삭제. 쿠키 삭제는 컨트롤러에서 수행 */
     @Transactional
     public void logout(String refreshToken) {
         log.info("[AuthService] logout 요청");

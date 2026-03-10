@@ -28,6 +28,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * 인증 API. 회원가입·로컬 로그인·토큰 갱신·로그아웃·중복 체크.
+ * 토큰은 HttpOnly 쿠키로 발급(쿠키 우선), 바디에도 포함하여 모바일 앱도 지원.
+ */
 @Slf4j
 @Validated
 @RestController
@@ -49,6 +53,7 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    /** 회원가입. 이메일·닉네임 중복 검사 + 약관 동의 포함. 201 반환 */
     @PostMapping("/signup")
     public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
         log.info("[AuthController] signup 요청 email={}, nickname={}", request.getEmail(), request.getNickname());
