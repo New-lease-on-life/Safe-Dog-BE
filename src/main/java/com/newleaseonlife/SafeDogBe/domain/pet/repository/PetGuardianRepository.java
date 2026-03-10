@@ -1,6 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.repository;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.PetGuardian;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetGuardianRole;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -21,4 +22,7 @@ public interface PetGuardianRepository extends JpaRepository<PetGuardian, Long> 
 
     /** 특정 반려동물에 해당 사용자가 보호자로 등록되어 있는지 여부 */
     boolean existsByPetIdAndUserId(Long petId, Long userId);
+
+    /** 특정 회원이 주어진 역할(OWNER 등)로 등록된 반려동물이 있는지 여부. 탈퇴 방어 등에서 사용 */
+    boolean existsByUser_IdAndRole(Long userId, PetGuardianRole role);
 }
