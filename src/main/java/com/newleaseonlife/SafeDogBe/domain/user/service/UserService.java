@@ -157,6 +157,7 @@ public class UserService {
             log.warn("[UserService] restore 불가 - 소셜 전용 계정 userId={}", user.getId());
             throw new BusinessException(UserErrorCode.CANNOT_RESTORE);
         }
+        // 비밀번호 불일치 시 USER_NOT_FOUND 반환: "계정이 없다"고 알려 계정 존재 여부 노출 방지 (보안 의도적)
         if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             log.warn("[UserService] restore 실패 - 비밀번호 불일치 userId={}", user.getId());
             throw new BusinessException(UserErrorCode.USER_NOT_FOUND);

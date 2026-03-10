@@ -20,14 +20,22 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class UserResponse {
 
+    /** 회원 PK */
     private Long id;
+    /** 이메일 (소셜 전용 가입 시 null 가능) */
     private String email;
+    /** 닉네임 */
     private String nickname;
+    /** 실명 */
     private String name;
+    /** 생년월일 */
     private LocalDate birthDate;
+    /** 가입 경로 (LOCAL / GOOGLE / NAVER / KAKAO) */
     private ProviderType providerType;
+    /** 프로필 이미지 URL */
     private String profileImageUrl;
+    /** 권한 (USER / ADMIN) */
     private UserRole role;
-    /** 온보딩 완료 여부. true 이면 최초 설정 완료로 간주 */
+    /** 온보딩 완료 여부. true이면 최초 설정 완료로 간주 */
     private boolean isOnboardingCompleted;
 }

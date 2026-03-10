@@ -53,16 +53,16 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** 이메일 (소셜 전용 가입 시 null 가능) */
-    @Column(unique = true, length = 100)
+    /** 이메일 (소셜 전용 가입 시 null 가능). 유니크: uk_users_email */
+    @Column(length = 100)
     private String email;
 
     /** 비밀번호 해시. 평문 저장 금지. 소셜 전용 시 null */
     @Column(length = 255)
     private String password;
 
-    /** 닉네임. 서비스 내 표시명, 중복 불가 */
-    @Column(nullable = false, unique = true, length = 50)
+    /** 닉네임. 서비스 내 표시명. 유니크: uk_users_nickname */
+    @Column(nullable = false, length = 50)
     private String nickname;
 
     /** 실명 (선택) */
@@ -102,11 +102,14 @@ public class User {
     @Column(length = 20)
     private String lastLoginProvider;
 
+    /** 생성 일시. JPA Auditing 자동 기록, 수정 불가 */
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** 수정 일시. JPA Auditing 자동 갱신 */
     @LastModifiedDate
+    @Column(nullable = false)
     private LocalDateTime updatedAt;
 
     /** 온보딩(최초 설정) 완료 여부. true 시 온보딩 화면 스킵 */
