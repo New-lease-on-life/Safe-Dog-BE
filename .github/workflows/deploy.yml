@@ -3,7 +3,7 @@ name: Deploy Spring Boot to EC2
 
 on:
   push:
-    branches: [ "main" ] # main 브랜치 푸시 시 자동 실행
+    branches: [ "main", "develop" ]
 
 permissions:
   id-token: write # OIDC 인증 필수
