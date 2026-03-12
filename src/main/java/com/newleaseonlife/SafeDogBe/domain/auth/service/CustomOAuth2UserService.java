@@ -11,6 +11,7 @@ import com.newleaseonlife.SafeDogBe.domain.auth.repository.OAuthAccountRepositor
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
+import com.newleaseonlife.SafeDogBe.domain.user.service.UserService;
 import com.newleaseonlife.SafeDogBe.global.security.CustomPrincipal;
 
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.UUID;
 
@@ -71,8 +74,39 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 })
                 .orElseGet(() -> resolveNewSocialUser(userInfo, provider));
 
+        // 2. 탈퇴 회원 처리: 소셜 재로그인 시 30일 내 자동 복구, 초과 시 차단
+        if (user.getStatus() == UserStatus.WITHDRAWN) {
+            restoreWithdrawnOrThrow(user);
+        }
+
         user.updateLastLogin(provider.name());
         return user;
+    }
+
+    /**
+     * 탈퇴 소셜 회원 재로그인 처리.
+     * 소셜 유저는 비밀번호가 없어 {@code POST /api/users/restore} 이메일+비밀번호 경로를 쓸 수 없으므로
+     * 소셜 재로그인 자체가 복구 수단이다.
+     * <ul>
+     *   <li>탈퇴 후 30일 이내 → 계정 자동 복구(ACTIVE 전환) 후 로그인 진행</li>
+     *   <li>탈퇴 후 30일 초과 → {@code OAuth2AuthenticationException} 발생 → FE 안내</li>
+     * </ul>
+     */
+    private void restoreWithdrawnOrThrow(User user) {
+        LocalDateTime withdrawnAt = user.getWithdrawnAt();
+        if (withdrawnAt == null) {
+            log.warn("[CustomOAuth2UserService] 탈퇴 시각 누락 userId={}", user.getId());
+            throw new OAuth2AuthenticationException("탈퇴된 계정입니다. 고객센터에 문의해 주세요.");
+        }
+        long days = ChronoUnit.DAYS.between(withdrawnAt, LocalDateTime.now());
+        if (days > UserService.RESTORE_AVAILABLE_DAYS) {
+            log.warn("[CustomOAuth2UserService] 복구 기간 만료 userId={}, days={}", user.getId(), days);
+            throw new OAuth2AuthenticationException(
+                    "ACCOUNT_RESTORE_EXPIRED|탈퇴 후 30일이 경과하여 계정을 복구할 수 없습니다."
+            );
+        }
+        log.info("[CustomOAuth2UserService] 탈퇴 소셜 회원 자동 복구 userId={}, withdrawnAt={}", user.getId(), withdrawnAt);
+        user.restore();
     }
 
     /**
