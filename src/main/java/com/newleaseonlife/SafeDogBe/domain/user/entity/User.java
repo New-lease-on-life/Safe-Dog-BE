@@ -57,9 +57,6 @@ public class User {
     @Column(length = 100)
     private String email;
 
-    /** 비밀번호 해시. 평문 저장 금지. 소셜 전용 시 null */
-    @Column(length = 255)
-    private String password;
 
     /** 닉네임. 서비스 내 표시명. 유니크: uk_users_nickname */
     @Column(nullable = false, length = 50)
@@ -123,17 +120,16 @@ public class User {
     private LocalDateTime withdrawnAt;
 
     @Builder
-    public User(String email, String password, String nickname, String name, String phone,
+    public User(String email, String nickname, String name, String phone,
                 LocalDate birthDate, String profileImageUrl,
                 UserStatus status, UserRole role, ProviderType providerType) {
         this.email = email;
-        this.password = password;
         this.nickname = nickname;
         this.name = name;
         this.phone = phone;
         this.birthDate = birthDate;
         this.profileImageUrl = profileImageUrl;
-        this.status = status != null ? status : UserStatus.ACTIVE;
+        this.status = status != null ? status : UserStatus.PENDING;
         this.role = role != null ? role : UserRole.USER;
         this.providerType = providerType;
     }
@@ -183,5 +179,9 @@ public class User {
     /** 마지막으로 선택한 반려동물 ID 갱신. null 허용 (선택 해제) */
     public void updateLastSelectedPet(Long petId) {
         this.lastSelectedPetId = petId;
+    }
+
+    public void activate() {
+        this.status = UserStatus.ACTIVE;
     }
 }

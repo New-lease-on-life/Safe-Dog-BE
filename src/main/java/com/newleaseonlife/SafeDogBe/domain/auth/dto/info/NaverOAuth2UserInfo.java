@@ -63,4 +63,11 @@ public class NaverOAuth2UserInfo implements OAuth2UserInfo {
     public Map<String, Object> getAttributes() {
         return attributes;
     }
+
+    @Override
+    public String getPhoneNumber() {
+        // 네이버는 전화번호를 "mobile" 이라는 키값으로 제공합니다.
+        if (response == null) return null;
+        return (String) response.get("mobile");
+    }
 }

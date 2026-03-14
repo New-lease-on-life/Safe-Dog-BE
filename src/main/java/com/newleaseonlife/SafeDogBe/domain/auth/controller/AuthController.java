@@ -1,12 +1,14 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.controller;
 
+import com.newleaseonlife.SafeDogBe.domain.auth.service.dto.SocialSignupCompleteRequest;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
+import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
+import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.CheckDuplicateRequest;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.LoginRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.RefreshTokenRequest;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SignupRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SocialLinkRequest;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.DeviceLoginProviderResponse;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
@@ -24,7 +26,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
@@ -53,6 +54,7 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
     private final CookieUtils cookieUtils;
+    private final UserRepository userRepository;
 
     @Operation(summary = "전화번호+이름 중복 체크", description = "중복이면 409(기존 소셜 타입 포함 메시지), 없으면 204")
     @GetMapping("/check-duplicate")
@@ -62,24 +64,14 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "이메일 회원가입", description = "이메일·닉네임 중복 검사, 약관 동의 포함. 성공 시 201")
-    @PostMapping("/signup")
-    public ResponseEntity<Void> signup(@Valid @RequestBody SignupRequest request) {
-        log.info("[AuthController] signup 요청 email={}, nickname={}", request.getEmail(), request.getNickname());
-        authService.signup(request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
-    }
-
-    @Operation(summary = "이메일 로그인", description = "성공 시 HttpOnly 쿠키 + 바디에 토큰 발급")
-    @PostMapping("/login")
-    public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request,
-                                               HttpServletResponse response) {
-        log.info("[AuthController] login 요청 email={}", request.getEmail());
-        TokenResponse tokenResponse = authService.login(request);
-        cookieUtils.addAccessTokenCookie(response, tokenResponse.getAccessToken(),
-                tokenResponse.getAccessTokenExpiresIn());
-        cookieUtils.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
-        return ResponseEntity.ok(tokenResponse);
+    @Operation(summary = "소셜 최초 가입 완료", description = "약관 동의와 초대 코드를 받아 PENDING 상태를 ACTIVE로 전환합니다.")
+    @PostMapping("/social-signup-complete")
+    public ResponseEntity<Void> completeSocialSignup(
+        @AuthenticationPrincipal CustomPrincipal principal,
+        @Valid @RequestBody SocialSignupCompleteRequest request) {
+        log.info("[AuthController] 소셜 가입 완료 요청 userId={}", principal.getUser().getId());
+        authService.completeSocialSignup(principal.getUser().getId(), request);
+        return ResponseEntity.ok().build();
     }
 
     @Operation(summary = "토큰 갱신", description = "쿠키 refresh_token 우선, 없으면 바디에서 읽음. 새 토큰 쿠키+바디 반환")
@@ -96,6 +88,21 @@ public class AuthController {
         cookieUtils.addAccessTokenCookie(httpResponse, tokenResponse.getAccessToken(),
                 tokenResponse.getAccessTokenExpiresIn());
         cookieUtils.addRefreshTokenCookie(httpResponse, tokenResponse.getRefreshToken());
+        return ResponseEntity.ok(tokenResponse);
+    }
+    // 💡 앱스토어 심사 통과를 위한 백도어 API (운영 환경에서는 이메일을 통한 권한 탈취 주의)
+    @Operation(summary = "테스트 계정 로그인 (운영 환경 주의)", description = "앱스토어 심사용 백도어 API")
+    @PostMapping("/test-login")
+    public ResponseEntity<TokenResponse> testLogin(
+        @RequestParam String email, HttpServletResponse response) {
+        log.info("[AuthController] 테스트 로그인 요청 email={}", email);
+        User testUser = userRepository.findByEmail(email)
+            .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        TokenResponse tokenResponse = authService.issueTokenResponse(testUser);
+        cookieUtils.addAccessTokenCookie(response, tokenResponse.getAccessToken(), tokenResponse.getAccessTokenExpiresIn());
+        cookieUtils.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
+
         return ResponseEntity.ok(tokenResponse);
     }
 

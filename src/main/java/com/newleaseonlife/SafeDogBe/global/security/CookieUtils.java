@@ -23,7 +23,8 @@ public class CookieUtils {
 
     private static final String REFRESH_TOKEN_PATH = "/api/auth/refresh";
     // AuthService.REFRESH_TOKEN_VALID_DAYS(7일)과 맞춤
-    private static final int    REFRESH_TOKEN_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7일
+    private static final int    REFRESH_TOKEN_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
+    // 기획상 90일으로 측정됨, 로그인 성공 시 로그인 90일동안 유지(로그인 할 때 마다 갱신)
 
     @Value("${app.cookie.secure:false}")
     private boolean secure;
