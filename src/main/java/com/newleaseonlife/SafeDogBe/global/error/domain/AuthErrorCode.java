@@ -18,7 +18,9 @@ public enum AuthErrorCode implements ApiCode {
     /** 만 14세 미만 가입 차단 */
     UNDER_AGE(HttpStatus.BAD_REQUEST, 400, "만 14세 이상만 가입할 수 있습니다."),
     /** 이미 연결된 소셜 계정 */
-    SOCIAL_ALREADY_LINKED(HttpStatus.CONFLICT, 409, "이미 연결된 소셜 계정입니다.");
+    SOCIAL_ALREADY_LINKED(HttpStatus.CONFLICT, 409, "이미 연결된 소셜 계정입니다."),
+    /** 이미 온보딩을 완료한 회원 */
+    ALREADY_ACTIVE_USER(HttpStatus.CONFLICT, 409, "이미 온보딩을 완료한 계정입니다.");
 
     private final HttpStatus httpStatus;
     private final Integer code;

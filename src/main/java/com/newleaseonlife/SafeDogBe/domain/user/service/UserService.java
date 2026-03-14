@@ -38,7 +38,6 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserConverter userConverter;
-    private final PasswordEncoder passwordEncoder;
     private final PetGuardianRepository petGuardianRepository;
 
     /** ID로 회원 조회. 없으면 USER_NOT_FOUND */
@@ -158,40 +157,6 @@ public class UserService {
         log.info("[UserService] withdraw 완료 userId={}, withdrawnAt={}", userId, user.getWithdrawnAt());
     }
 
-    /**
-     * 탈퇴 복구(이메일 + 비밀번호). 로그인 불가 상태이므로 비인증 API에서 호출.
-     * 탈퇴 후 30일 이내만 복구 가능. 소셜 전용 계정은 비밀번호가 없으므로 CANNOT_RESTORE.
-     */
-    @Transactional
-    public UserResponse restore(String email, String rawPassword) {
-        log.info("[UserService] restore 요청 email={}", email);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    log.warn("[UserService] restore 실패 - 사용자 없음 email={}", email);
-                    return new BusinessException(UserErrorCode.USER_NOT_FOUND);
-                });
-        if (user.getStatus() != UserStatus.WITHDRAWN || user.getWithdrawnAt() == null) {
-            log.warn("[UserService] restore 불가 - 탈퇴 상태 아님 userId={}", user.getId());
-            throw new BusinessException(UserErrorCode.CANNOT_RESTORE);
-        }
-        long daysSinceWithdraw = ChronoUnit.DAYS.between(user.getWithdrawnAt(), LocalDateTime.now());
-        if (daysSinceWithdraw > RESTORE_AVAILABLE_DAYS) {
-            log.warn("[UserService] restore 불가 - 복구 기간 만료 userId={}, days={}", user.getId(), daysSinceWithdraw);
-            throw new BusinessException(UserErrorCode.RESTORE_PERIOD_EXPIRED);
-        }
-        if (user.getPassword() == null || user.getPassword().isBlank()) {
-            log.warn("[UserService] restore 불가 - 소셜 전용 계정 userId={}", user.getId());
-            throw new BusinessException(UserErrorCode.CANNOT_RESTORE);
-        }
-        // 비밀번호 불일치 시 USER_NOT_FOUND 반환: "계정이 없다"고 알려 계정 존재 여부 노출 방지 (보안 의도적)
-        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
-            log.warn("[UserService] restore 실패 - 비밀번호 불일치 userId={}", user.getId());
-            throw new BusinessException(UserErrorCode.USER_NOT_FOUND);
-        }
-        user.restore();
-        log.info("[UserService] restore 완료 userId={}", user.getId());
-        return userConverter.toResponse(user);
-    }
 
     /**
      * 탈퇴 복구(회원 ID). 이미 사용자가 식별된 경우(예: 소셜 로그인 콜백에서 WITHDRAWN 사용자 확인 후) 호출.
@@ -202,6 +167,7 @@ public class UserService {
         log.info("[UserService] restore by userId={}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
         if (user.getStatus() != UserStatus.WITHDRAWN || user.getWithdrawnAt() == null) {
             throw new BusinessException(UserErrorCode.CANNOT_RESTORE);
         }

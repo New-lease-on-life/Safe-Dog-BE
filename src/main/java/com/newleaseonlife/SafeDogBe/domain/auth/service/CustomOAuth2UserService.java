@@ -141,23 +141,24 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         // 4. 전화번호+이름으로 다른 소셜 계정이 있으면 "동일계정존재" 분기
         //    → 오류 코드를 "DUPLICATE_ACCOUNT:{기존provider}" 형식으로 전달. FE가 파싱해 계정 연결 안내
         String name = userInfo.getName();
-        if (name != null && !name.isBlank()) {
-            userRepository.findFirstByName(name).ifPresent(existing -> {
-                // 이름만으로 부정확할 수 있으므로 providerType이 다를 때만 분기
+        String phone = userInfo.getPhoneNumber();
+
+        if (name != null && phone != null) {
+            userRepository.findByPhoneAndName(phone, name).ifPresent(existing -> {
                 if (existing.getProviderType() != null && !existing.getProviderType().name().equals(provider.name())) {
-                    log.warn("[CustomOAuth2UserService] 동일 이름 타 소셜 계정 감지 name={}, existingProvider={}, newProvider={}",
-                            name, existing.getProviderType(), provider);
+                    log.warn("[CustomOAuth2UserService] 동일 이름/번호 타 소셜 계정 감지 name={}, phone={}, existingProvider={}, newProvider={}",
+                        name, phone, existing.getProviderType(), provider);
                     String existingDesc = existing.getProviderType().getDescription();
                     throw new OAuth2AuthenticationException(
-                            "DUPLICATE_ACCOUNT:" + existing.getProviderType().name()
-                                    + "|" + existingDesc + "로 이미 가입된 계정이 있어요. " + existingDesc + "로 로그인하거나 계정을 연결해 주세요."
+                        "DUPLICATE_ACCOUNT:" + existing.getProviderType().name()
+                            + "|" + existingDesc + "로 이미 가입된 계정이 있어요."
                     );
                 }
             });
         }
 
         // 5. 신규 가입
-        return createUserAndOAuthAccount(userInfo, provider, birthDate, email);
+        return createUserAndOAuthAccount(userInfo, provider, birthDate, email, phone);
     }
 
     /** 기존 User에 새 소셜 OAuthAccount 연결 (계정 통합) */
@@ -172,28 +173,29 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     }
 
     private User createUserAndOAuthAccount(OAuth2UserInfo userInfo, OAuthProvider provider,
-                                           LocalDate birthDate, String email) {
+        LocalDate birthDate, String email, String phone) {
         if (email == null || email.isBlank()) {
             email = userInfo.getProvider() + "_" + userInfo.getProviderId() + "@safedog.oauth";
         }
         String nickname = (userInfo.getName() != null ? userInfo.getName() : "user")
-                + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+            + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
 
         User newUser = User.builder()
-                .email(email)
-                .nickname(nickname)
-                .name(userInfo.getName())
-                .birthDate(birthDate)
-                .status(UserStatus.ACTIVE)
-                .providerType(ProviderType.valueOf(userInfo.getProvider().toUpperCase()))
-                .build();
+            .email(email)
+            .nickname(nickname)
+            .name(userInfo.getName())
+            .phone(phone) // 전달받은 전화번호 저장 (이후 중복 검증 시 사용됨)
+            .birthDate(birthDate)
+            .status(UserStatus.PENDING)
+            .providerType(ProviderType.valueOf(userInfo.getProvider().toUpperCase()))
+            .build();
         userRepository.save(newUser);
 
         OAuthAccount newAccount = OAuthAccount.builder()
-                .user(newUser)
-                .provider(provider)
-                .providerId(userInfo.getProviderId())
-                .build();
+            .user(newUser)
+            .provider(provider)
+            .providerId(userInfo.getProviderId())
+            .build();
         oauthAccountRepository.save(newAccount);
         log.info("[CustomOAuth2UserService] 신규 OAuth 가입 완료 userId={}, provider={}", newUser.getId(), provider);
 

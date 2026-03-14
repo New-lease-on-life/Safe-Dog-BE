@@ -5,6 +5,7 @@ import com.newleaseonlife.SafeDogBe.global.security.JwtAuthenticationFilter;
 import com.newleaseonlife.SafeDogBe.global.security.OAuth2LoginFailureHandler;
 import com.newleaseonlife.SafeDogBe.global.security.OAuth2LoginSuccessHandler;
 
+import com.newleaseonlife.SafeDogBe.global.security.PendingUserCheckFilter;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ public class SecurityConfig {
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
+    private final PendingUserCheckFilter pendingUserCheckFilter; // ✅ 필터 이름 변경 적용
 
     /** 허용 CORS Origin 목록. 환경별 application.yaml의 app.cors.allowed-origins에서 주입. */
     @Value("${app.cors.allowed-origins}")
@@ -65,10 +67,10 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/signup", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout",
+                                "/api/auth/refresh", "/api/auth/logout",
                                 "/api/auth/check-duplicate", "/api/auth/devices/**",
                                 "/login/**", "/oauth2/**").permitAll()
-                        .requestMatchers("/api/terms", "/api/users/check-nickname", "/api/users/restore").permitAll()
+                        .requestMatchers("/api/terms", "/api/users/check-nickname").permitAll()
                         .requestMatchers("/api/invites/*/join").authenticated() // 참여는 인증 필요
                         .requestMatchers("/api/invites/**").permitAll() // 초대 정보 조회는 비인증 허용
                         .requestMatchers("/h2-console/**").permitAll()
@@ -80,7 +82,11 @@ public class SecurityConfig {
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler))
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+                // 1번: JWT 토큰으로 인증 (이 필터는 PENDING과 ACTIVE 유저 모두 통과시킴)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // 2번: PENDING 유저가 메인 API에 접근하는지 감시 및 차단
+                .addFilterAfter(pendingUserCheckFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

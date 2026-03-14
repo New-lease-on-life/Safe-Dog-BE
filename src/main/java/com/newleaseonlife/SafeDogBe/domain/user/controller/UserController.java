@@ -92,14 +92,6 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "회원 복구", description = "탈퇴 후 30일 이내만 가능. 이메일+비밀번호 인증 방식")
-    @PostMapping("/restore")
-    public ResponseEntity<UserResponse> restore(@Valid @RequestBody RestoreRequest request) {
-        log.info("[UserController] restore 요청 email={}", request.email());
-        UserResponse response = userService.restore(request.email(), request.password());
-        return ResponseEntity.ok(response);
-    }
-
     @Operation(summary = "마지막 선택 반려동물 갱신", description = "반려동물 선택 시 호출. 다음 접속 기본값으로 저장")
     /** 마지막으로 선택한 반려동물 ID 갱신. 반려동물 선택 시 호출하여 다음 접속 기본값으로 저장.
      *  petId = 0 또는 파라미터 미전송은 허용하지 않음(양수 필수) */

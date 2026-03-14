@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 /**
  * OAuth2 로그인 성공 시 토큰 발급·쿠키 설정 후 리다이렉트.
@@ -45,6 +46,12 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         log.info("[OAuth2LoginSuccessHandler] 소셜 로그인 성공 - 쿠키 발급 userId={}",
                 principal.getUser().getId());
 
-        getRedirectStrategy().sendRedirect(request, response, redirectUriAfterLogin);
+        // 수정: 유저 상태를 쿼리 파라미터로 붙여서 프론트가 화면 라우팅을 할 수 있게 돕기
+        String status = principal.getUser().getStatus().name(); // ACTIVE or PENDING
+        String targetUrl = UriComponentsBuilder.fromUriString(redirectUriAfterLogin)
+            .queryParam("status", status)
+            .build().toUriString();
+
+        getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }
