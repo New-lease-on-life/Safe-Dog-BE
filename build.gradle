@@ -105,3 +105,9 @@ jib {
         ports = ['8080']
     }
 }
+
+configurations {
+    all {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+}
