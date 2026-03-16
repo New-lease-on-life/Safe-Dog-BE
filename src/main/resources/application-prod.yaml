@@ -100,6 +100,7 @@ logging:
 # 서버 설정
 server:
   port: 8080
+  forward-headers-strategy: native
   servlet:
     encoding:
       charset: UTF-8
