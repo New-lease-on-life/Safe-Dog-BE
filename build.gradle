@@ -92,7 +92,7 @@ jacocoTestReport {
 // Jib 설정: Github Actions에서 빌드 후 DockerHub/ECR로 푸시
 jib {
     from {
-        image = 'eclipse-temurin:21-jre-alpine' // 경량화된 Alpine 리눅스 기반 JRE 21 사용
+        image = 'eclipse-temurin:17-jre-alpine' // 경량화된 Alpine 리눅스 기반 JRE 21 사용
     }
     to {
         image = System.getenv('IMAGE_NAME') ?:'safedog' // ECR 주소 또는 DockerHub 주소
