@@ -48,6 +48,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.setAllowedOrigins(allowedOrigins);
+        config.addAllowedOriginPattern("*"); //테스트용 추후에 지우기
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setMaxAge(3600L);
@@ -69,7 +70,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/refresh", "/api/auth/logout",
                                 "/api/auth/check-duplicate", "/api/auth/devices/**",
-                                "/api/auth/test-login",
+                                "/api/auth/test-login", //테스트 계정 로그인용
                                 "/login/**", "/oauth2/**").permitAll()
                         .requestMatchers("/api/terms", "/api/users/check-nickname").permitAll()
                         .requestMatchers("/api/invites/*/join").authenticated() // 참여는 인증 필요
