@@ -12,8 +12,8 @@ import java.util.List;
  */
 public interface CareTemplateRepository extends JpaRepository<CareTemplate, Long> {
 
-  /** 특정 반려동물의 활성 템플릿 목록 (items 페치조인) */
-  @Query("SELECT ct FROM CareTemplate ct LEFT JOIN FETCH ct.items WHERE ct.pet.id = :petId AND ct.isActive = true ORDER BY ct.id ASC")
+  /** 특정 반려동물의 활성 템플릿 목록 */
+  @Query("SELECT ct FROM CareTemplate ct WHERE ct.pet.id = :petId AND ct.isActive = true ORDER BY ct.id ASC")
   List<CareTemplate> findActiveByPetId(Long petId);
 
   /**
