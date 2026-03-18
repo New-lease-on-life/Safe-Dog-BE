@@ -65,21 +65,10 @@ jobs:
           
           echo "Command ID: $COMMAND_ID"
           
+          # 배포 스크립트가 성공적으로 끝날 때까지 대기 (실패 시 CI 파이프라인도 실패 처리)
           echo "Waiting for command to complete..."
           aws ssm wait command-executed \
             --command-id "$COMMAND_ID" \
             --instance-id "$INSTANCE_ID"
-          
-          # 최종 상태 확인 (성공/실패 여부 출력)
-          STATUS=$(aws ssm list-command-invocations \
-            --command-id "$COMMAND_ID" \
-            --details \
-            --query "CommandInvocations[0].Status" \
-            --output text)
-            
-          if [ "$STATUS" != "Success" ]; then
-            echo "Deployment failed with status: $STATUS"
-            exit 1
-          fi
           
           echo "Deployment command executed successfully!"
