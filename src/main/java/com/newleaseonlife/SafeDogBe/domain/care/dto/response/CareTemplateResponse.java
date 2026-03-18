@@ -1,12 +1,18 @@
 package com.newleaseonlife.SafeDogBe.domain.care.dto.response;
 
 import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.CareType;
-import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.RepeatCycle;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.RepeatCycleUnit;
+import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.TimeSlot;
+import lombok.*;
 
+import java.time.LocalDate;
+import java.util.List;
+
+/** 3월 18일 수정
+ * 케어 템플릿 응답 DTO.
+ * ✅ 변경: repeatCycle → repeatCycleValue + repeatCycleUnit + repeatStartDate
+ * ✅ 추가: timeSlot, customTimeSlot, items, urineTrackingOn, fecesTrackingOn, memo
+ */
 @Getter
 @Builder
 @NoArgsConstructor
@@ -15,16 +21,20 @@ public class CareTemplateResponse {
 
   private Long id;
   private Long petId;
-
-  // Enum의 원본 값(서버용)과 프론트엔드 노출용 한글 값을 동시에 내려줍니다.
   private CareType careType;
   private String careTypeDescription;
-
   private String title;
-  private String content;
-
-  private RepeatCycle repeatCycle;
-  private String repeatCycleDescription;
-
+  private TimeSlot timeSlot;
+  private String timeSlotDescription;
+  private String customTimeSlot;
+  private Integer repeatCycleValue;
+  private RepeatCycleUnit repeatCycleUnit;
+  private String repeatCycleUnitDescription;
+  private LocalDate repeatStartDate;
+  private boolean urineTrackingOn;
+  private boolean fecesTrackingOn;
+  private boolean weightRequestOn;
+  private String memo;
   private boolean isActive;
+  private List<CareTemplateItemResponse> items;
 }

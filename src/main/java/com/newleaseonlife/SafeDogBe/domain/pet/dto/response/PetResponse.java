@@ -1,20 +1,20 @@
+// domain/pet/dto/response/PetResponse.java
 package com.newleaseonlife.SafeDogBe.domain.pet.dto.response;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-/**
- * 반려동물 응답. 조회·등록·수정 API 응답에 사용.
- * 보호자 목록은 GET /api/pets/{petId}/guardians 로 별도 조회.
+/** 수정 3월 18일
+ * 반려동물 응답 DTO.
+ *
+ * ✅ 추가: weight, isWeightUnknown, registrationNumber,
+ *          isBirthDateUnknown, hasAllergy, allergyDescription
  */
 @Getter
 @Builder
@@ -23,17 +23,20 @@ import java.util.Set;
 public class PetResponse {
 
     private Long id;
-    /** 메인 보호자(소유자) ID */
     private Long userId;
     private String name;
     private String species;
     private String breed;
     private LocalDate birthDate;
+    private boolean isBirthDateUnknown;
     private Gender gender;
-    /** 중성화 여부 */
     private boolean isNeutered;
+    private BigDecimal weight;
+    private boolean isWeightUnknown;
+    private String registrationNumber;
+    private Boolean hasAllergy;
+    private String allergyDescription;
     private String profileImageUrl;
-    /** 질병 목록. 등록된 질병이 없으면 빈 Set */
     private Set<PetDisease> diseases;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

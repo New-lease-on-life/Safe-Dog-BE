@@ -1,39 +1,37 @@
 package com.newleaseonlife.SafeDogBe.domain.care.entity;
 
 import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.CareType;
-import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.RepeatCycle;
+import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.RepeatCycleUnit;
+import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.TimeSlot;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.Pet;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EntityListeners;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
 
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
+import jakarta.persistence.*;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+/**
+ * 수정 3월 18일 케어 템플릿. 반려노트 등록 시 설정한 케어 항목.
+ * <p>
+ * ✅ 제거: RepeatCycle enum → repeatCycleValue + repeatCycleUnit + repeatStartDate ✅ 추가: timeSlot
+ * (아침/점심/저녁/직접입력) ✅ 추가: customTimeSlot (직접입력 시 텍스트값) ✅ 추가: memo (케어 블록 하단 메모) ✅ 추가: urinTrackingOn,
+ * fecesTrackingOn (배변노트 전용) ✅ items: CareTemplateItem과 1:N 관계 (식사/영양제 등 세부 항목)
+ * <p>
+ * ⚠️ 단방향 원칙: - [기존 리팩토링 문서 오류] items(@OneToMany) 필드 추가됐었음 → 제거 - CareTemplateItem → CareTemplate
+ * 단방향 @ManyToOne 유지 - items 조회는 CareTemplateItemRepository.findByCareTemplateId()로 처리 - items 삭제는
+ * CareTemplateItemRepository.deleteByCareTemplateId()로 처리
+ */
 @Entity
 @Table(
     name = "care_template",
     indexes = {
-        // 반려동물별 템플릿 목록 조회가 매우 빈번하므로 인덱스 필수
-        @Index(name = "idx_care_template_pet_id", columnList = "pet_id")
+        @Index(name = "idx_care_template_pet_id", columnList = "pet_id"),
+        @Index(name = "idx_care_template_pet_type", columnList = "pet_id, care_type")
     }
 )
 @Getter
@@ -45,7 +43,6 @@ public class CareTemplate {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // 반려동물 삭제 시 템플릿도 연쇄 삭제(Cascade)되도록 DB 레벨 제약조건 적용
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "pet_id", nullable = false, foreignKey = @ForeignKey(name = "fk_care_template_pet"))
   private Pet pet;
@@ -57,43 +54,140 @@ public class CareTemplate {
   @Column(nullable = false, length = 200)
   private String title;
 
-  @Column(columnDefinition = "TEXT")
-  private String content;
+  // ─── 시간대 ──────────────────────────────────────────────────
+  @Enumerated(EnumType.STRING)
+  @Column(length = 20)
+  private TimeSlot timeSlot;
+
+  /**
+   * CUSTOM 선택 시 직접 입력값
+   */
+  @Column(length = 50)
+  private String customTimeSlot;
+
+  // ─── 반복 주기 ────────────────────────────────────────────────
+  @Column
+  private Integer repeatCycleValue;
 
   @Enumerated(EnumType.STRING)
-  @Column(length = 50)
-  private RepeatCycle repeatCycle;
+  @Column(length = 10)
+  private RepeatCycleUnit repeatCycleUnit;
 
-  // 논리적 삭제 및 스케줄러 생성 여부를 판단하는 핵심 플래그
+  @Column
+  private LocalDate repeatStartDate;
+
+  // ─── 배변 전용 ────────────────────────────────────────────────
+  @Column(nullable = false)
+  private boolean urineTrackingOn = false;
+
+  @Column(nullable = false)
+  private boolean fecesTrackingOn = false;
+
+  // ─── 체중 전용 ────────────────────────────────────────────────
+  @Column(nullable = false)
+  private boolean weightRequestOn = false;
+
+  // ─── 메모 ──────────────────────────────────────────────────
+  @Column(columnDefinition = "TEXT")
+  private String memo;
+
   @Column(nullable = false)
   private boolean isActive = true;
 
-  // SQL 스키마에 updated_at이 없으므로 생성 시간만 자동 추적
   @CreatedDate
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
 
+  // ❌ 제거: @OneToMany(mappedBy = "careTemplate") List<CareTemplateItem> items
+  //    이유: CareTemplateItem이 CareTemplate으로 @ManyToOne 단방향을 이미 가짐.
+  //         items 목록은 CareTemplateItemRepository.findByCareTemplateIdOrderBySortOrderAsc()로 조회.
+  //         items 삭제는 CareTemplateItemRepository.deleteByCareTemplateId()로 처리.
+
   @Builder
-  public CareTemplate(Pet pet, CareType careType, String title, String content, RepeatCycle repeatCycle) {
+  public CareTemplate(Pet pet, CareType careType, String title,
+      TimeSlot timeSlot, String customTimeSlot,
+      Integer repeatCycleValue, RepeatCycleUnit repeatCycleUnit,
+      LocalDate repeatStartDate,
+      boolean urineTrackingOn, boolean fecesTrackingOn,
+      boolean weightRequestOn, String memo) {
     this.pet = pet;
     this.careType = careType;
     this.title = title;
-    this.content = content;
-    this.repeatCycle = repeatCycle;
+    this.timeSlot = timeSlot;
+    this.customTimeSlot = customTimeSlot;
+    this.repeatCycleValue = repeatCycleValue;
+    this.repeatCycleUnit = repeatCycleUnit;
+    this.repeatStartDate = repeatStartDate;
+    this.urineTrackingOn = urineTrackingOn;
+    this.fecesTrackingOn = fecesTrackingOn;
+    this.weightRequestOn = weightRequestOn;
+    this.memo = memo;
     this.isActive = true;
   }
 
-  // 비즈니스 로직 1: 템플릿 내용 수정 (제목, 내용, 반복 주기)
-  public void updateTemplate(CareType careType, String title, String content, RepeatCycle repeatCycle) {
-    if (careType != null) this.careType = careType;
-    if (title != null) this.title = title;
-    if (content != null) this.content = content;
-    if (repeatCycle != null) this.repeatCycle = repeatCycle;
+  public void update(CareType careType, String title,
+      TimeSlot timeSlot, String customTimeSlot,
+      Integer repeatCycleValue, RepeatCycleUnit repeatCycleUnit,
+      LocalDate repeatStartDate,
+      boolean urineTrackingOn, boolean fecesTrackingOn,
+      boolean weightRequestOn, String memo) {
+    if (careType != null) {
+      this.careType = careType;
+    }
+    if (title != null) {
+      this.title = title;
+    }
+    this.timeSlot = timeSlot;
+    this.customTimeSlot = customTimeSlot;
+    this.repeatCycleValue = repeatCycleValue;
+    this.repeatCycleUnit = repeatCycleUnit;
+    this.repeatStartDate = repeatStartDate;
+    this.urineTrackingOn = urineTrackingOn;
+    this.fecesTrackingOn = fecesTrackingOn;
+    this.weightRequestOn = weightRequestOn;
+    if (memo != null) {
+      this.memo = memo;
+    }
   }
 
-  // 비즈니스 로직 2: 템플릿 비활성화 (Soft Delete 방식)
-  // 과거의 완료된 체크리스트 기록을 유지하기 위해 물리적 삭제(DELETE) 대신 비활성화 처리
   public void deactivate() {
     this.isActive = false;
+  }
+
+  /**
+   * 스케줄러에서 오늘 생성 여부 판단
+   */
+  public boolean shouldGenerateToday(LocalDate today) {
+    if (!isActive) {
+      return false;
+    }
+    if (repeatCycleValue == null || repeatCycleUnit == null || repeatStartDate == null) {
+      return true; // 주기 미설정 → 매일
+    }
+    if (today.isBefore(repeatStartDate)) {
+      return false;
+    }
+    return switch (repeatCycleUnit) {
+      case DAY -> {
+        long days = today.toEpochDay() - repeatStartDate.toEpochDay();
+        yield days % repeatCycleValue == 0;
+      }
+      case WEEK -> {
+        long daysBetween = today.toEpochDay() - repeatStartDate.toEpochDay();
+        yield daysBetween % (repeatCycleValue * 7L) == 0;
+      }
+      case MONTH -> {
+        int months = (today.getYear() - repeatStartDate.getYear()) * 12
+            + (today.getMonthValue() - repeatStartDate.getMonthValue());
+        yield months >= 0 && months % repeatCycleValue == 0
+            && today.getDayOfMonth() == repeatStartDate.getDayOfMonth();
+      }
+      case YEAR -> {
+        int years = today.getYear() - repeatStartDate.getYear();
+        yield years >= 0 && years % repeatCycleValue == 0
+            && today.getMonthValue() == repeatStartDate.getMonthValue()
+            && today.getDayOfMonth() == repeatStartDate.getDayOfMonth();
+      }
+    };
   }
 }
