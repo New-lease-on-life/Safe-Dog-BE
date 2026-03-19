@@ -78,6 +78,9 @@ dependencies {
     // 10.AWS S3 연동을 위한 SDK, Spring Cloud AWS Parameter Store
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.696'
     implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store:3.1.1'
+
+    // Firebase Admin SDK (FCM)
+    implementation 'com.google.firebase:firebase-admin:9.2.0'
 }
 
 tasks.named('test') {
@@ -95,7 +98,7 @@ jib {
         image = 'eclipse-temurin:17-jre-alpine' // 경량화된 Alpine 리눅스 기반 JRE 21 사용
     }
     to {
-        image = System.getenv('IMAGE_NAME') ?:'safedog' // ECR 주소 또는 DockerHub 주소
+        image = System.getenv('IMAGE_NAME') ?: 'safedog' // ECR 주소 또는 DockerHub 주소
         tags = ['latest', "${project.version}".toString()]
     }
     container {

@@ -1,25 +1,29 @@
 package com.newleaseonlife.SafeDogBe.global.error;
 
+import java.time.LocalDateTime;
 import lombok.Builder;
 import lombok.Getter;
 
 /** API 오류 응답 DTO. status(HTTP 상태 코드), code(비즈니스 코드), message(클라이언트 메시지). */
 @Getter
+@Builder
 public class ErrorResponse {
-
     private final int status;
-    private final int code;
+    private final Integer code;
     private final String message;
 
-    @Builder
-    public ErrorResponse(int status, int code, String message) {
-        this.status = status;
-        this.code = code;
-        this.message = message;
+    // ✅ 모니터링 및 추적을 위해 추가된 필드
+    private final String path;
+    private final LocalDateTime timestamp;
+
+    public static ErrorResponse of(int status, Integer code, String message, String path) {
+        return ErrorResponse.builder()
+            .status(status)
+            .code(code)
+            .message(message)
+            .path(path)
+            .timestamp(LocalDateTime.now()) // 에러 객체 생성 시점의 시간 자동 할당
+            .build();
     }
 
-    /** 편의 팩토리. GlobalExceptionHandler 등에서 사용. */
-    public static ErrorResponse of(int status, int code, String message) {
-        return new ErrorResponse(status, code, message);
-    }
 }

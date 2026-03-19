@@ -2,6 +2,7 @@ package com.newleaseonlife.SafeDogBe.global.error;
 
 import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 
 import lombok.extern.slf4j.Slf4j;
@@ -24,84 +25,94 @@ public class GlobalExceptionHandler {
 
     /** 도메인 비즈니스 예외 (AuthErrorCode, UserErrorCode 등). */
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
+    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e, HttpServletRequest request) {
         ApiCode code = e.getCode();
-        log.warn("[BusinessException] code={}, message={}", code.getCode(), e.resolvedMessage());
+        log.warn("[BusinessException] path={}, code={}, message={}", request.getRequestURI(), code.getCode(), e.resolvedMessage());
+
         return ResponseEntity
-                .status(code.getHttpStatus())
-                .body(ErrorResponse.of(
-                        code.getHttpStatus().value(),
-                        code.getCode(),
-                        e.resolvedMessage()
-                ));
+            .status(code.getHttpStatus())
+            .body(ErrorResponse.of(
+                code.getHttpStatus().value(),
+                code.getCode(),
+                e.resolvedMessage(),
+                request.getRequestURI()
+            ));
     }
 
     // @RequestBody + @Valid 검증 실패
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e, HttpServletRequest request) {
         String message = e.getBindingResult().getFieldErrors().stream()
-                .findFirst()
-                .map(err -> err.getDefaultMessage() != null ? err.getDefaultMessage() : "잘못된 요청입니다.")
-                .orElse(CommonErrorCode.BAD_REQUEST.getMessage());
-        log.warn("[ValidationException] message={}", message);
+            .findFirst()
+            .map(err -> err.getDefaultMessage() != null ? err.getDefaultMessage() : "잘못된 요청입니다.")
+            .orElse(CommonErrorCode.BAD_REQUEST.getMessage());
+
+        log.warn("[ValidationException] path={}, message={}", request.getRequestURI(), message);
         ApiCode code = CommonErrorCode.BAD_REQUEST;
+
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message));
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message, request.getRequestURI()));
     }
 
     // @Validated + @RequestParam 검증 실패 (UserController.checkNickname 등)
     @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException e) {
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException e, HttpServletRequest request) {
         String message = e.getConstraintViolations().stream()
-                .findFirst()
-                .map(v -> v.getMessage() != null ? v.getMessage() : "잘못된 요청입니다.")
-                .orElse(CommonErrorCode.BAD_REQUEST.getMessage());
-        log.warn("[ConstraintViolationException] message={}", message);
+            .findFirst()
+            .map(v -> v.getMessage() != null ? v.getMessage() : "잘못된 요청입니다.")
+            .orElse(CommonErrorCode.BAD_REQUEST.getMessage());
+
+        log.warn("[ConstraintViolationException] path={}, message={}", request.getRequestURI(), message);
         ApiCode code = CommonErrorCode.BAD_REQUEST;
+
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message));
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message, request.getRequestURI()));
     }
 
     // JPA 낙관적 락 충돌
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
-        log.error("[OptimisticLockException] 동시 수정 충돌 발생", e);
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException e, HttpServletRequest request) {
+        log.error("[OptimisticLockException] path={}, 동시 수정 충돌 발생", request.getRequestURI(), e);
         ApiCode code = CommonErrorCode.OPTIMISTIC_LOCK_CONFLICT;
+
         return ResponseEntity
-                .status(code.getHttpStatus())
-                .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage()));
+            .status(code.getHttpStatus())
+            .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage(), request.getRequestURI()));
     }
 
     // 파일 업로드 용량 초과
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException e) {
-        log.warn("[MaxUploadSizeExceededException] 파일 용량 초과");
+    public ResponseEntity<ErrorResponse> handleMaxUpload(MaxUploadSizeExceededException e, HttpServletRequest request) {
+        log.warn("[MaxUploadSizeExceededException] path={}, 파일 용량 초과", request.getRequestURI());
         ApiCode code = CommonErrorCode.FILE_SIZE_EXCEED;
+
         return ResponseEntity
-                .status(code.getHttpStatus())
-                .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage()));
+            .status(code.getHttpStatus())
+            .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage(), request.getRequestURI()));
     }
 
     // 잘못된 인자 (예: S3 파일 검증 실패 등) → 400 Bad Request
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e) {
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(IllegalArgumentException e, HttpServletRequest request) {
         String message = e.getMessage() != null ? e.getMessage() : CommonErrorCode.BAD_REQUEST.getMessage();
-        log.warn("[IllegalArgumentException] message={}", message);
+        log.warn("[IllegalArgumentException] path={}, message={}", request.getRequestURI(), message);
         ApiCode code = CommonErrorCode.BAD_REQUEST;
+
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message));
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message, request.getRequestURI()));
     }
 
     /** 그 외 미처리 예외 → 500 Server Error. */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleAny(Exception e) {
-        log.error("[UnhandledException] 예상치 못한 서버 에러", e);
+    public ResponseEntity<ErrorResponse> handleAny(Exception e, HttpServletRequest request) {
+        log.error("[UnhandledException] path={}, 예상치 못한 서버 에러", request.getRequestURI(), e);
         ApiCode code = CommonErrorCode.SERVER_ERROR;
+
         return ResponseEntity
-                .status(code.getHttpStatus())
-                .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage()));
+            .status(code.getHttpStatus())
+            .body(ErrorResponse.of(code.getHttpStatus().value(), code.getCode(), code.getMessage(), request.getRequestURI()));
     }
 }

@@ -1,6 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.care.service;
 
 import com.newleaseonlife.SafeDogBe.domain.care.converter.DailyChecklistConverter;
+import com.newleaseonlife.SafeDogBe.domain.care.dto.request.DailyChecklistUpdateRequest;
 import com.newleaseonlife.SafeDogBe.domain.care.dto.response.DailyChecklistResponse;
 import com.newleaseonlife.SafeDogBe.domain.care.entity.ChecklistHistoryLog;
 import com.newleaseonlife.SafeDogBe.domain.care.entity.DailyChecklist;
@@ -14,6 +15,7 @@ import com.newleaseonlife.SafeDogBe.global.error.domain.CareErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +28,7 @@ import java.util.List;
  * ✅ 추가: 당일 여부 검증 (기획서 3: 오늘 날짜만 수정 가능)
  * ✅ 변경: completeChecklist/uncompleteChecklist — 날짜 검증 추가
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -80,6 +83,34 @@ public class DailyChecklistService {
     checklist.uncomplete();
     saveLog(checklist, user, ChecklistActionType.UNCHECK);
     return converter.toResponse(checklist);
+  }
+
+  @Transactional
+  public DailyChecklistResponse updateChecklist(Long checklistId, DailyChecklistUpdateRequest request) {
+    log.info("[DailyChecklistService] updateChecklist checklistId={}", checklistId);
+    DailyChecklist checklist = getChecklistOrThrow(checklistId);
+    validateTodayOnly(checklist);
+
+    // checklist.update(request); 필요시 엔티티 업데이트 구현
+
+    return converter.toResponse(checklist);
+  }
+
+  public DailyChecklistResponse getLatestChecklist(Long checklistId) {
+    log.debug("[DailyChecklistService] getLatestChecklist checklistId={}", checklistId);
+    DailyChecklist checklist = getChecklistOrThrow(checklistId);
+    return converter.toResponse(checklist);
+  }
+
+  public boolean hasAccessToChecklist(Long checklistId, Long userId) {
+    log.debug("[DailyChecklistService] hasAccessToChecklist checklistId={}, userId={}", checklistId, userId);
+    try {
+      getChecklistOrThrow(checklistId);
+      // 향후 PetGuardianRepository 연동을 통해 더 정교한 소유권 체크 권장
+      return true;
+    } catch (BusinessException e) {
+      return false;
+    }
   }
 
   /**

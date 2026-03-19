@@ -1,5 +1,8 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.controller;
 
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.FormValidationCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -80,9 +83,27 @@ public class PetController {
             @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long petId,
             @Valid @RequestBody PetUpdateRequest request) {
-        log.info("[PetController] 반려동물 수정 petId={}, userId={}", petId, principal.getUser().getId());
+
+        // 1. 권한 확인 (관리자 여부)
+        if (!petService.isAdminOfPet(petId, principal.getUser().getId())) {
+            throw new BusinessException(CommonErrorCode.NO_PERMISSION);
+        }
+
+        // 2. 입력값 검증
+        validatePetUpdateRequest(request);
+
         PetResponse response = petService.update(petId, principal.getUser().getId(), request);
         return ResponseEntity.ok(response);
+    }
+
+    private void validatePetUpdateRequest(PetUpdateRequest request) {
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new BusinessException(FormValidationCode.PET_NAME_REQUIRED);
+        }
+
+        if (request.getBirthDate() == null) {
+            throw new BusinessException(FormValidationCode.PET_BIRTH_REQUIRED);
+        }
     }
 
     @Operation(summary = "반려동물 삭제", description = "소유자만 가능. 보호자 연결(pet_guardian) 함께 삭제")
