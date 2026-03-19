@@ -30,9 +30,7 @@ public class FirebaseConfig {
       byte[] decodedBytes = java.util.Base64.getDecoder().decode(firebaseCredentialsContent);
 
       // 파일 경로 대신 문자열(JSON)을 스트림으로 변환
-      InputStream credentialsStream = new ByteArrayInputStream(
-          firebaseCredentialsContent.getBytes(StandardCharsets.UTF_8)
-      );
+      InputStream credentialsStream = new ByteArrayInputStream(decodedBytes);
 
       FirebaseOptions options = FirebaseOptions.builder()
           .setCredentials(GoogleCredentials.fromStream(credentialsStream))
