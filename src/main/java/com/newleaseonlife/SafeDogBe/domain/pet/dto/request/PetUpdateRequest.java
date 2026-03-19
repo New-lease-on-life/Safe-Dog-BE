@@ -1,19 +1,21 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.dto.request;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
 
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import lombok.*;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Set;
 
-/**
- * 반려동물 수정 요청. PATCH /api/pets/{petId} body.
- * null 필드는 변경하지 않음(부분 수정).
+/** 3월 18일 수정
+ * 반려동물 수정 요청. null 필드는 변경하지 않음(부분 수정).
+ *
+ * ✅ 추가: weight, isWeightUnknown, registrationNumber,
+ *          isBirthDateUnknown, hasAllergy, allergyDescription, diseases
  */
 @Getter
 @Builder
@@ -21,7 +23,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class PetUpdateRequest {
 
-    @Size(max = 100)
+    @Size(min = 1, max = 20)
     private String name;
 
     @Size(max = 50)
@@ -31,11 +33,22 @@ public class PetUpdateRequest {
     private String breed;
 
     private LocalDate birthDate;
+    private Boolean isBirthDateUnknown;
 
     private Gender gender;
-
     private Boolean isNeutered;
 
-    /** 프로필 이미지 URL. Pet 엔티티가 TEXT 타입이므로 길이 제한 없음 */
+    private BigDecimal weight;
+    private Boolean isWeightUnknown;
+
+    @Pattern(regexp = "^[0-9]{0,15}$", message = "동물등록번호는 숫자 15자리 이내여야 합니다.")
+    private String registrationNumber;
+
+    private Boolean hasAllergy;
+    private String allergyDescription;
+
     private String profileImageUrl;
+
+    @Size(max = 5, message = "질병은 최대 5개까지 선택 가능합니다.")
+    private Set<PetDisease> diseases;
 }

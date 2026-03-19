@@ -9,11 +9,23 @@ import com.newleaseonlife.SafeDogBe.domain.care.repository.ChecklistHistoryLogRe
 import com.newleaseonlife.SafeDogBe.domain.care.repository.DailyChecklistRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.CareErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.List;
+
+/** 3월 18일 수정
+ * ✅ 추가: getChecklistsByDate() — 날짜별 체크리스트 조회
+ * ✅ 추가: 당일 여부 검증 (기획서 3: 오늘 날짜만 수정 가능)
+ * ✅ 변경: completeChecklist/uncompleteChecklist — 날짜 검증 추가
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -22,58 +34,79 @@ public class DailyChecklistService {
   private final DailyChecklistRepository dailyChecklistRepository;
   private final ChecklistHistoryLogRepository historyLogRepository;
   private final UserRepository userRepository;
-  private final DailyChecklistConverter checklistConverter;
+  private final DailyChecklistConverter converter;
 
-  @Transactional
-  public DailyChecklistResponse completeChecklist(Long checklistId, Long userId) {
-    // 1. 체크리스트와 유저 조회
-    DailyChecklist checklist = dailyChecklistRepository.findById(checklistId)
-        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 할 일입니다."));
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
-
-    // 2. 이미 완료된 항목인지 1차 방어 로직 (JPA 낙관적 락이 2차 방어 수행)
-    if (checklist.isCompleted()) {
-      throw new IllegalStateException("이미 완료 처리된 항목입니다.");
-    }
-
-    // 3. 도메인 로직 호출: 완료 상태 및 행위자 업데이트 (더티 체킹 발생)
-    checklist.complete(user);
-
-    // 4. 부수 효과(Side Effect): 히스토리 로그 생성 및 저장
-    ChecklistHistoryLog log = ChecklistHistoryLog.builder()
-        .dailyChecklist(checklist)
-        .user(user)
-        .actionType(ChecklistActionType.CHECK)
-        .build();
-    historyLogRepository.save(log);
-
-    // 5. 프론트엔드로 최신 상태(Version 포함) 반환
-    return checklistConverter.toResponse(checklist);
+  /** 특정 날짜의 반려동물 체크리스트 목록 조회 */
+  public List<DailyChecklistResponse> getChecklistsByDate(Long petId, LocalDate targetDate) {
+    return converter.toResponseList(
+        dailyChecklistRepository.findAllByPetIdAndTargetDateWithUser(petId, targetDate));
   }
 
+  /**
+   * 체크리스트 완료.
+   * ✅ 추가: 오늘 날짜만 수정 가능 검증
+   */
   @Transactional
-  public DailyChecklistResponse uncompleteChecklist(Long checklistId, Long userId) {
-    DailyChecklist checklist = dailyChecklistRepository.findById(checklistId)
-        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 할 일입니다."));
-    User user = userRepository.findById(userId) // 취소를 누른 사람의 정보
-        .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 유저입니다."));
+  public DailyChecklistResponse completeChecklist(Long checklistId, Long userId) {
+    DailyChecklist checklist = getChecklistOrThrow(checklistId);
+    User user = getUserOrThrow(userId);
 
-    if (!checklist.isCompleted()) {
-      throw new IllegalStateException("아직 완료되지 않은 항목입니다.");
+    validateTodayOnly(checklist);
+
+    if (checklist.isCompleted()) {
+      throw new BusinessException(CareErrorCode.CHECKLIST_ALREADY_COMPLETED);
     }
 
-    // 도메인 로직: 상태 초기화
-    checklist.uncomplete();
+    checklist.complete(user);
+    saveLog(checklist, user, ChecklistActionType.CHECK);
+    return converter.toResponse(checklist);
+  }
 
-    // 부수 효과: "취소" 로그 기록 (누가 취소했는지 추적)
-    ChecklistHistoryLog log = ChecklistHistoryLog.builder()
+  /**
+   * 체크리스트 완료 취소.
+   * ✅ 추가: 오늘 날짜만 수정 가능 검증
+   */
+  @Transactional
+  public DailyChecklistResponse uncompleteChecklist(Long checklistId, Long userId) {
+    DailyChecklist checklist = getChecklistOrThrow(checklistId);
+    User user = getUserOrThrow(userId);
+
+    validateTodayOnly(checklist);
+
+    if (!checklist.isCompleted()) {
+      throw new BusinessException(CareErrorCode.CHECKLIST_NOT_COMPLETED);
+    }
+
+    checklist.uncomplete();
+    saveLog(checklist, user, ChecklistActionType.UNCHECK);
+    return converter.toResponse(checklist);
+  }
+
+  /**
+   * 기획서 3: "당일 체크리스트만 수정 가능. 과거 날짜는 읽기 전용"
+   */
+  private void validateTodayOnly(DailyChecklist checklist) {
+    LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+    if (!checklist.getTargetDate().equals(today)) {
+      throw new BusinessException(CareErrorCode.CHECKLIST_DATE_NOT_TODAY);
+    }
+  }
+
+  private void saveLog(DailyChecklist checklist, User user, ChecklistActionType actionType) {
+    historyLogRepository.save(ChecklistHistoryLog.builder()
         .dailyChecklist(checklist)
         .user(user)
-        .actionType(ChecklistActionType.UNCHECK)
-        .build();
-    historyLogRepository.save(log);
+        .actionType(actionType)
+        .build());
+  }
 
-    return checklistConverter.toResponse(checklist);
+  private DailyChecklist getChecklistOrThrow(Long id) {
+    return dailyChecklistRepository.findById(id)
+        .orElseThrow(() -> new BusinessException(CareErrorCode.CHECKLIST_NOT_FOUND));
+  }
+
+  private User getUserOrThrow(Long id) {
+    return userRepository.findById(id)
+        .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
   }
 }
