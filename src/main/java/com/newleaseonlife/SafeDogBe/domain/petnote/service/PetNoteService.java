@@ -9,6 +9,7 @@ import com.newleaseonlife.SafeDogBe.domain.petnote.dto.response.PetNoteResponse;
 import com.newleaseonlife.SafeDogBe.domain.petnote.entity.PetNote;
 import com.newleaseonlife.SafeDogBe.domain.petnote.repository.PetNoteRepository;
 import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.PetErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.PetNoteErrorCode;
 
@@ -37,7 +38,6 @@ public class PetNoteService {
 
     /** 반려동물별 노트 목록(날짜 최신순). 소유자만 조회 가능 */
     public List<PetNoteResponse> findByPetId(Long petId, Long userId) {
-        log.debug("[PetNoteService] findByPetId petId={}, userId={}", petId, userId);
         ensurePetOwnership(petId, userId);
         List<PetNote> notes = petNoteRepository.findAllByPet_IdOrderByNoteDateDesc(petId);
         return petNoteConverter.toResponseList(notes);
@@ -45,7 +45,6 @@ public class PetNoteService {
 
     /** 반려동물·특정일 노트 목록(날짜별 조회). 소유자만 조회 가능 */
     public List<PetNoteResponse> findByPetIdAndDate(Long petId, LocalDate noteDate, Long userId) {
-        log.debug("[PetNoteService] findByPetIdAndDate petId={}, noteDate={}, userId={}", petId, noteDate, userId);
         ensurePetOwnership(petId, userId);
         List<PetNote> notes = petNoteRepository.findAllByPet_IdAndNoteDateOrderByIdAsc(petId, noteDate);
         return petNoteConverter.toResponseList(notes);
@@ -53,7 +52,6 @@ public class PetNoteService {
 
     /** 노트 단건 조회. 해당 노트의 Pet 소유자만 가능 */
     public PetNoteResponse findById(Long noteId, Long userId) {
-        log.debug("[PetNoteService] findById noteId={}, userId={}", noteId, userId);
         PetNote note = getNoteOrThrow(noteId);
         ensurePetOwnership(note.getPetId(), userId);
         return petNoteConverter.toResponse(note);
@@ -62,29 +60,25 @@ public class PetNoteService {
     /** 반려노트 생성. request.petId에 해당하는 Pet 소유자만 가능 */
     @Transactional
     public PetNoteResponse create(PetNoteCreateRequest request, Long userId) {
-        log.info("[PetNoteService] create petId={}, noteDate={}, userId={}",
-                request.getPetId(), request.getNoteDate(), userId);
         Pet pet = petRepository.findByIdAndUserId(request.getPetId(), userId)
-                .orElseThrow(() -> {
-                    if (petRepository.findById(request.getPetId()).isEmpty()) {
-                        return new BusinessException(PetErrorCode.PET_NOT_FOUND);
-                    }
-                    return new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
-                });
+            .orElseThrow(() -> {
+                if (petRepository.findById(request.getPetId()).isEmpty()) {
+                    return new BusinessException(PetErrorCode.PET_NOT_FOUND);
+                }
+                return new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
+            });
         PetNote note = PetNote.builder()
-                .pet(pet)
-                .noteDate(request.getNoteDate())
-                .content(request.getContent())
-                .build();
+            .pet(pet)
+            .noteDate(request.getNoteDate())
+            .content(request.getContent())
+            .build();
         PetNote saved = petNoteRepository.save(note);
-        log.info("[PetNoteService] create 완료 noteId={}", saved.getId());
         return petNoteConverter.toResponse(saved);
     }
 
     /** 반려노트 수정. content·noteDate 중 전달된 값만 반영. 소유자만 가능 */
     @Transactional
     public PetNoteResponse update(Long noteId, PetNoteUpdateRequest request, Long userId) {
-        log.info("[PetNoteService] update noteId={}, userId={}", noteId, userId);
         PetNote note = getNoteOrThrow(noteId);
         ensurePetOwnership(note.getPetId(), userId);
         note.update(request.getContent(), request.getNoteDate());
@@ -94,20 +88,51 @@ public class PetNoteService {
     /** 반려노트 삭제. 해당 노트의 Pet 소유자만 가능 */
     @Transactional
     public void delete(Long noteId, Long userId) {
-        log.info("[PetNoteService] delete noteId={}, userId={}", noteId, userId);
         PetNote note = getNoteOrThrow(noteId);
         ensurePetOwnership(note.getPetId(), userId);
         petNoteRepository.delete(note);
-        log.info("[PetNoteService] delete 완료 noteId={}", noteId);
+    }
+    // ============== 컨트롤러/UI 컴포넌트용 추가 메서드 ==============
+
+    public List<PetNoteResponse> getPetNotes(Long petId) {
+        if (petRepository.findById(petId).isEmpty()) {
+            throw new BusinessException(PetErrorCode.PET_NOT_FOUND);
+        }
+        List<PetNote> notes = petNoteRepository.findAllByPet_IdOrderByNoteDateDesc(petId);
+        return petNoteConverter.toResponseList(notes);
     }
 
+    public List<PetNoteResponse> getPetNotesByDate(Long petId, LocalDate date) {
+        if (petRepository.findById(petId).isEmpty()) {
+            throw new BusinessException(PetErrorCode.PET_NOT_FOUND);
+        }
+        if (date == null) {
+            throw new BusinessException(CommonErrorCode.BAD_REQUEST, "조회할 날짜를 지정해주세요.");
+        }
+        List<PetNote> notes = petNoteRepository.findAllByPet_IdAndNoteDateOrderByIdAsc(petId, date);
+        return petNoteConverter.toResponseList(notes);
+    }
+
+    public boolean hasAccessToNote(Long noteId, Long userId) {
+        try {
+            findById(noteId, userId);
+            return true;
+        } catch (BusinessException e) {
+            return false;
+        }
+    }
+
+    public boolean belongsToPet(Long noteId, Long petId) {
+        return petNoteRepository.findById(noteId)
+            .map(note -> note.getPetId().equals(petId))
+            .orElse(false);
+    }
+
+    // ============== 내부 Helper 메서드 ==============
     /** 노트 조회. 없으면 PET_NOTE_NOT_FOUND */
     private PetNote getNoteOrThrow(Long noteId) {
         return petNoteRepository.findById(noteId)
-                .orElseThrow(() -> {
-                    log.warn("[PetNoteService] 반려노트 없음 noteId={}", noteId);
-                    return new BusinessException(PetNoteErrorCode.PET_NOTE_NOT_FOUND);
-                });
+            .orElseThrow(() -> new BusinessException(PetNoteErrorCode.PET_NOTE_NOT_FOUND));
     }
 
     /**

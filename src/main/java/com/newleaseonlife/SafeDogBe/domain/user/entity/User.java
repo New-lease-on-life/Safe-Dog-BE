@@ -72,7 +72,6 @@ public class User {
 
     /** 생년월일 (선택) */
     private LocalDate birthDate;
-
     /** 프로필 이미지 URL. 긴 URL 대비 TEXT 사용 */
     @Column(columnDefinition = "TEXT")
     private String profileImageUrl;
@@ -118,6 +117,32 @@ public class User {
 
     /** 탈퇴 요청 시각. Soft Delete 시점 기준 30일 내 복구 가능, 1년간 기록 보관 */
     private LocalDateTime withdrawnAt;
+
+
+    //------------------FCM 관련----------------------------------
+    @Column(name = "fcm_token", length = 500)
+    private String fcmToken;
+
+    @Column(name = "last_fcm_token_update")
+    private LocalDateTime lastFcmTokenUpdate;
+
+    /**
+     * FCM 토큰 업데이트 (도메인 주도 설계 방식)
+     * @param newToken 클라이언트로부터 전달받은 새 토큰
+     */
+    public void updateFcmToken(String newToken) {
+        if (newToken == null || newToken.isBlank()) {
+            this.fcmToken = null;
+            this.lastFcmTokenUpdate = null;
+            return;
+        }
+
+        // 기존 토큰과 다를 때만 업데이트 시간 갱신 (선택 사항)
+        if (!newToken.equals(this.fcmToken)) {
+            this.fcmToken = newToken;
+            this.lastFcmTokenUpdate = LocalDateTime.now();
+        }
+    }
 
     @Builder
     public User(String email, String nickname, String name, String phone,
