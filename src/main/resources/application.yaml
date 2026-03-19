@@ -5,7 +5,7 @@ spring:
   application:
     name: SafeDogBe
   profiles:
-    active: prod # 기본 구동 환경을 local로 설정 (운영 서버 구동 시 환경변수로 prod 덮어쓰기)
+    active: local # 기본 구동 환경을 local로 설정 (운영 서버 구동 시 환경변수로 prod 덮어쓰기)
   flyway:
     enabled: false
     baseline-on-migrate: true # 기존에 테이블이 존재하더라도 에러를 내지 않고 베이스라인(기준점)을 잡아줌
