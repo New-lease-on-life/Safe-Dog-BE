@@ -1,0 +1,18 @@
+# 모니터링 프로필 전용 설정 (기존 yaml 수정 없이 사용)
+# 사용 시: --spring.profiles.include=monitoring 또는 SPRING_PROFILES_INCLUDE=monitoring
+spring:
+  config:
+    activate:
+      on-profile: monitoring
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: SafeDogBe
