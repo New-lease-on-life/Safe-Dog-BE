@@ -19,7 +19,7 @@ import java.io.IOException;
 public class FirebaseConfig {
 
   // 파라미터 스토어의 이름을 변수로 받습니다.
-  @Value("${firebase.credentials-content}")
+  @Value("${firebase.credentials-path}")
   private String firebaseCredentialsContent;
 
   @Bean
