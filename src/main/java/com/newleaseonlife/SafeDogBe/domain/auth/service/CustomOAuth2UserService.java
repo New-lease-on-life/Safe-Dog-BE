@@ -1,7 +1,5 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.service;
 
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.info.GoogleOAuth2UserInfo;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.info.KakaoOAuth2UserInfo;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.info.NaverOAuth2UserInfo;
 import com.newleaseonlife.SafeDogBe.domain.auth.dto.info.OAuth2UserInfo;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.OAuthAccount;
@@ -55,9 +53,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
     private OAuth2UserInfo createOAuth2UserInfo(String registrationId, Map<String, Object> attributes) {
         return switch (registrationId.toLowerCase()) {
-            case "google" -> new GoogleOAuth2UserInfo(attributes);
             case "naver" -> new NaverOAuth2UserInfo(attributes);
-            case "kakao" -> new KakaoOAuth2UserInfo(attributes);
             default -> throw new OAuth2AuthenticationException("지원하지 않는 소셜 로그인입니다. ID: " + registrationId);
         };
     }
