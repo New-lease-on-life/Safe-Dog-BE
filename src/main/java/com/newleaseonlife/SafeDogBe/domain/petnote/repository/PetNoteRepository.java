@@ -2,7 +2,10 @@ package com.newleaseonlife.SafeDogBe.domain.petnote.repository;
 
 import com.newleaseonlife.SafeDogBe.domain.petnote.entity.PetNote;
 
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,4 +27,8 @@ public interface PetNoteRepository extends JpaRepository<PetNote, Long> {
 
     /** 해당 반려동물에 노트 존재 여부 */
     boolean existsByPet_Id(Long petId);
+
+    /** 홈 화면: 반려동물의 최신 메모 목록 (작성자 패치조인, 최신순) */
+    @Query("SELECT n FROM PetNote n LEFT JOIN FETCH n.writtenBy WHERE n.pet.id = :petId ORDER BY n.createdAt DESC")
+    List<PetNote> findLatestByPetIdWithWriter(@Param("petId") Long petId, Pageable pageable);
 }

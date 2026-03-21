@@ -29,4 +29,7 @@ public class PetNoteCreateRequest {
 
     /** 메모 내용. 선택 */
     private String content;
+
+    /** 연결할 체크리스트 ID. 선택 */
+    private Long linkedChecklistId;
 }

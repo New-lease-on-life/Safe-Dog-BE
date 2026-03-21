@@ -30,6 +30,7 @@ public class DailyChecklistConverter {
             .completedByUserId(c.getCompletedBy() != null ? c.getCompletedBy().getId() : null)
             .completedByNickname(c.getCompletedBy() != null ? c.getCompletedBy().getNickname() : null)
             .completedByProfileImageUrl(c.getCompletedBy() != null ? c.getCompletedBy().getProfileImageUrl() : null)
+            .completedAt(c.getCompletedAt())
             .version(c.getVersion())
             .updatedAt(c.getUpdatedAt())
             .build())

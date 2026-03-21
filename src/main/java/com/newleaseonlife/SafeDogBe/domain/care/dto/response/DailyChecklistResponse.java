@@ -31,6 +31,8 @@ public class DailyChecklistResponse {
   private String completedByNickname;
   /** ✅ 추가: 완료자 프로필 이미지 URL */
   private String completedByProfileImageUrl;
+  /** ✅ 추가: 완료 처리 시각 */
+  private LocalDateTime completedAt;
   private Integer version;
   private LocalDateTime updatedAt;
 }

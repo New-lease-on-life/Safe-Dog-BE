@@ -20,6 +20,10 @@ public class PetNoteConverter {
                 .petId(entity.getPetId())
                 .noteDate(entity.getNoteDate())
                 .content(entity.getContent())
+                .writtenByUserId(entity.getWrittenBy() != null ? entity.getWrittenBy().getId() : null)
+                .writtenByNickname(entity.getWrittenBy() != null ? entity.getWrittenBy().getNickname() : null)
+                .writtenByProfileImageUrl(entity.getWrittenBy() != null ? entity.getWrittenBy().getProfileImageUrl() : null)
+                .linkedChecklistId(entity.getLinkedChecklistId())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

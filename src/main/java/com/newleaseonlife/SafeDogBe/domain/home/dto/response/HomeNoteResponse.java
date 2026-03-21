@@ -1,40 +1,40 @@
-package com.newleaseonlife.SafeDogBe.domain.petnote.dto.response;
+package com.newleaseonlife.SafeDogBe.domain.home.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * 반려노트 응답. 조회·등록·수정 API 응답에 사용.
- */
+/** 홈 화면 메모 목록 항목 */
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PetNoteResponse {
+public class HomeNoteResponse {
 
-    /** 반려노트 PK */
     private Long id;
-    /** 대상 반려동물 ID */
-    private Long petId;
-    /** 기록 대상일 */
-    private LocalDate noteDate;
-    /** 메모 내용 */
     private String content;
+
     /** 작성자 ID */
     private Long writtenByUserId;
+
     /** 작성자 닉네임 */
     private String writtenByNickname;
+
     /** 작성자 프로필 이미지 URL */
     private String writtenByProfileImageUrl;
+
+    /** 작성자의 반려동물에 대한 역할 (OWNER / CAREGIVER) */
+    private String writtenByRole;
+
+    /** 전송(생성) 시각 */
+    private LocalDateTime sentAt;
+
+    /** 마지막 로그인 이후 새로 작성된 메모 여부 */
+    private boolean isNew;
+
     /** 연결된 체크리스트 ID (optional) */
     private Long linkedChecklistId;
-    /** 생성 일시 */
-    private LocalDateTime createdAt;
-    /** 수정 일시 */
-    private LocalDateTime updatedAt;
 }

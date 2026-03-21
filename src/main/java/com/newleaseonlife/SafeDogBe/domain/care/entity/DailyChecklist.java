@@ -83,6 +83,10 @@ public class DailyChecklist {
   @JoinColumn(name = "completed_by", foreignKey = @ForeignKey(name = "fk_daily_checklist_completed"))
   private User completedBy;
 
+  /** 완료 처리 시각. 완료 취소 시 null로 초기화 */
+  @Column
+  private LocalDateTime completedAt;
+
   // 백엔드 핵심: 동시성 제어를 위한 낙관적 락(Optimistic Lock)
   @Version
   @Column(nullable = false)
@@ -111,12 +115,14 @@ public class DailyChecklist {
   public void complete(User user) {
     this.isCompleted = true;
     this.completedBy = user;
+    this.completedAt = LocalDateTime.now();
   }
 
   // 비즈니스 로직 2: 체크리스트 완료 취소
   public void uncomplete() {
     this.isCompleted = false;
     this.completedBy = null;
+    this.completedAt = null;
   }
 
   // 비즈니스 로직 3: 스냅샷 내용 수정 (오늘만 특별히 내용을 바꿀 때)
