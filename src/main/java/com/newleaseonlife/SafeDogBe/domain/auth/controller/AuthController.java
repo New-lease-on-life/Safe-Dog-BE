@@ -1,7 +1,10 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.controller;
 
+import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
 import com.newleaseonlife.SafeDogBe.domain.auth.service.dto.SocialSignupCompleteRequest;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserRole;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,8 +24,11 @@ import com.newleaseonlife.SafeDogBe.global.security.CustomPrincipal;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 
+
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -77,29 +83,50 @@ public class AuthController {
     @Operation(summary = "토큰 갱신", description = "쿠키 refresh_token 우선, 없으면 바디에서 읽음. 새 토큰 쿠키+바디 반환")
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(
-            @RequestBody(required = false) RefreshTokenRequest request,
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+        @RequestBody(required = false) RefreshTokenRequest request,
+        HttpServletRequest httpRequest,
+        HttpServletResponse httpResponse) {
         log.info("[AuthController] refresh 요청");
 
         String refreshToken = resolveRefreshToken(httpRequest, request);
         TokenResponse tokenResponse = authService.refresh(new RefreshTokenRequest(refreshToken));
 
         cookieUtils.addAccessTokenCookie(httpResponse, tokenResponse.getAccessToken(),
-                tokenResponse.getAccessTokenExpiresIn());
+            tokenResponse.getAccessTokenExpiresIn());
         cookieUtils.addRefreshTokenCookie(httpResponse, tokenResponse.getRefreshToken());
         return ResponseEntity.ok(tokenResponse);
     }
     // 💡 앱스토어 심사 통과를 위한 백도어 API (운영 환경에서는 이메일을 통한 권한 탈취 주의)
-    @Operation(summary = "테스트 계정 로그인 (운영 환경 주의)", description = "앱스토어 심사용 백도어 API")
+    @Operation(summary = "테스트 계정 로그인 및 가입(운영 환경 주의)", description = "백도어 API")
     @PostMapping("/test-login")
+    @Transactional // DB 쓰기 작업이 있으므로 트랜잭션 추가
     public ResponseEntity<TokenResponse> testLogin(
         @RequestParam String email, HttpServletResponse response) {
-        log.info("[AuthController] 테스트 로그인 요청 email={}", email);
+        log.info("[AuthController] 테스트 로그인/가입 요청 email={}", email);
         User testUser = userRepository.findByEmail(email)
-            .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+            .orElseGet(() -> {
+                log.info("[AuthController] 테스트 계정이 존재하지 않아 새로 생성합니다. email={}", email);
 
+                // 닉네임 중복 방지를 위해 UUID나 랜덤 문자열 추가 권장
+                String randomNickname = "Tester_" + UUID.randomUUID().toString().substring(0, 8);
+
+                User newUser = User.builder()
+                    .email(email)
+                    .nickname(randomNickname)
+                    .name("Test User")
+                    .status(UserStatus.ACTIVE) // 바로 활성 상태로 생성
+                    .role(UserRole.USER)
+                    .providerType(ProviderType.LOCAL) // 백도어용으로 LOCAL 혹은 TEST 지정
+                    .build();
+
+                return userRepository.save(newUser);
+            });
+
+        // 2. 로그인 처리 (마지막 로그인 시간 업데이트 등)
+        testUser.updateLastLogin("TEST_BACKDOOR");
+        //토큰 발급
         TokenResponse tokenResponse = authService.issueTokenResponse(testUser);
+        //쿠키세팅
         cookieUtils.addAccessTokenCookie(response, tokenResponse.getAccessToken(), tokenResponse.getAccessTokenExpiresIn());
         cookieUtils.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
 
@@ -109,9 +136,9 @@ public class AuthController {
     @Operation(summary = "로그아웃", description = "쿠키 삭제 + refresh_token DB 무효화")
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
-            @RequestBody(required = false) RefreshTokenRequest request,
-            HttpServletRequest httpRequest,
-            HttpServletResponse httpResponse) {
+        @RequestBody(required = false) RefreshTokenRequest request,
+        HttpServletRequest httpRequest,
+        HttpServletResponse httpResponse) {
         log.info("[AuthController] logout 요청");
 
         String refreshToken = resolveRefreshToken(httpRequest, request);
@@ -137,8 +164,8 @@ public class AuthController {
     @Operation(summary = "기기별 로그인 소셜 타입 기록", description = "로그인 성공 후 FE가 호출. provider=KAKAO 등 전달")
     @PutMapping("/devices/{deviceId}/login-provider")
     public ResponseEntity<DeviceLoginProviderResponse> registerDeviceLogin(
-            @PathVariable String deviceId,
-            @RequestParam String provider) {
+        @PathVariable String deviceId,
+        @RequestParam String provider) {
         log.info("[AuthController] registerDeviceLogin deviceId={}, provider={}", deviceId, provider);
         DeviceLoginProviderResponse response = authService.registerDeviceLogin(deviceId, provider);
         return ResponseEntity.ok(response);
@@ -147,8 +174,8 @@ public class AuthController {
     @Operation(summary = "소셜 계정 연결", description = "이미 로그인된 사용자가 추가 소셜 계정 연결. FE는 OAuth2 완료 후 providerId 전달")
     @PostMapping("/social-accounts")
     public ResponseEntity<Void> linkSocialAccount(
-            @AuthenticationPrincipal CustomPrincipal principal,
-            @Valid @RequestBody SocialLinkRequest request) {
+        @AuthenticationPrincipal CustomPrincipal principal,
+        @Valid @RequestBody SocialLinkRequest request) {
         log.info("[AuthController] linkSocialAccount userId={}, provider={}", principal.getUser().getId(), request.provider());
         authService.linkSocialAccount(principal.getUser().getId(), request);
         return ResponseEntity.noContent().build();
