@@ -1,6 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.notification.repository;
 
 import com.newleaseonlife.SafeDogBe.domain.notification.entity.Notification;
+import com.newleaseonlife.SafeDogBe.domain.notification.entity.enums.NotificationType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -57,4 +58,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
   @Query("UPDATE Notification n SET n.isRead = true " +
       "WHERE n.user.id = :userId")
   void markAllAsRead(@Param("userId") Long userId);
+
+  /** 특정 사용자의 특정 알림 타입을 모두 삭제 (예: 마케팅 수신 OFF 시) */
+  void deleteByUser_IdAndType(Long userId, NotificationType type);
 }

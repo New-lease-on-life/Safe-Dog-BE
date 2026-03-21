@@ -130,6 +130,15 @@ public class NotificationService {
   }
 
   /**
+   * 마케팅 수신 OFF 시, 해당 타입의 기존 알림을 모두 삭제합니다.
+   */
+  @Transactional
+  public void deleteMarketingNotifications(Long userId) {
+    notificationRepository.deleteByUser_IdAndType(userId, NotificationType.MARKETING);
+    log.info("[NotificationService] marketing notifications deleted userId={}", userId);
+  }
+
+  /**
    * 모든 사용자의 2주 이상 된 알림을 삭제합니다.
    * 매일 자정에 자동 실행됩니다.
    */

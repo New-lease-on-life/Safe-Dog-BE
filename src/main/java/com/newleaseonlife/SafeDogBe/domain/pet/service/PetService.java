@@ -19,6 +19,7 @@ import com.newleaseonlife.SafeDogBe.domain.pet.repository.PetRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.PetErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 
@@ -28,7 +29,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -51,6 +55,30 @@ public class PetService {
   public List<PetResponse> findMyPets(Long userId) {
     return petConverter.toResponseList(
         petRepository.findAllByUserIdOrderByCreatedAtDesc(userId));
+  }
+
+  /** 마이페이지용 내 반려동물 목록(오래된 순) */
+  public List<PetResponse> findMyPetsOrderByCreatedAtAsc(Long userId) {
+    return petConverter.toResponseList(
+        petRepository.findAllByUserIdOrderByCreatedAtAsc(userId));
+  }
+
+  /** 마이페이지용 공유 받은 반려동물 목록(보호자=CAREGIVER, 오래된 순) */
+  public List<PetResponse> findMySharedPetsOrderByCreatedAtAsc(Long userId) {
+    List<PetGuardian> caregiverGuardians =
+        petGuardianRepository.findByUser_IdAndRole(userId, PetGuardianRole.CAREGIVER);
+
+    // 사용자 기준으로 가져오되, pet이 중복되지 않도록 petId로 정리합니다.
+    Map<Long, Pet> petMap = new HashMap<>();
+    for (PetGuardian guardian : caregiverGuardians) {
+      Pet pet = guardian.getPet();
+      petMap.put(pet.getId(), pet);
+    }
+
+    List<Pet> pets = new ArrayList<>(petMap.values());
+    pets.sort(Comparator.comparing(Pet::getCreatedAt));
+
+    return petConverter.toResponseList(pets);
   }
 
   public PetResponse findById(Long petId, Long userId) {
@@ -159,6 +187,51 @@ public class PetService {
     Pet pet = getPetAsOwnerOrThrow(petId, userId);
     return petConverter.toGuardianResponseList(
         petGuardianRepository.findByPetIdOrderByIdAsc(pet.getId()));
+  }
+
+  /**
+   * 마이페이지용 보호자 목록 조회.
+   * OWNER만 허용하는 getGuardians()와 달리, 해당 사용자(OWNER/CAREGIVER)가 접근 권한이 있으면 조회 가능합니다.
+   */
+  public List<PetGuardianResponse> getGuardiansForPet(Long petId, Long userId) {
+    if (!hasAccessToPet(petId, userId)) {
+      throw new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
+    }
+    return petConverter.toGuardianResponseList(petGuardianRepository.findByPetIdOrderByIdAsc(petId));
+  }
+
+  /**
+   * 반려동물의 관리자(OWNER) 변경.
+   * - 현재 요청자는 petId의 OWNER만 가능
+   * - 새 OWNER로 지정된 구성원이 PetGuardian에 존재해야 함
+   * - 역할을 OWNER <-> CAREGIVER로 스왑
+   */
+  @Transactional
+  public List<PetGuardianResponse> changePetOwner(Long petId, Long currentOwnerUserId, Long newOwnerUserId) {
+    PetGuardian currentOwner = petGuardianRepository.findByPetIdAndUserId(petId, currentOwnerUserId)
+        .orElseThrow(() -> new BusinessException(PetErrorCode.PET_GUARDIAN_NOT_FOUND));
+
+    if (currentOwner.getRole() != PetGuardianRole.OWNER) {
+      throw new BusinessException(CommonErrorCode.NO_PERMISSION);
+    }
+
+    PetGuardian newOwner = petGuardianRepository.findByPetIdAndUserId(petId, newOwnerUserId)
+        .orElseThrow(() -> new BusinessException(PetErrorCode.PET_GUARDIAN_NOT_FOUND));
+
+    Pet pet = currentOwner.getPet();
+
+    // 이미 OWNER인 사용자를 선택한 경우: 상태 유지
+    if (newOwner.getRole() == PetGuardianRole.OWNER) {
+      return petConverter.toGuardianResponseList(petGuardianRepository.findByPetIdOrderByIdAsc(petId));
+    }
+
+    currentOwner.changeRole(PetGuardianRole.CAREGIVER);
+    newOwner.changeRole(PetGuardianRole.OWNER);
+    // pet.user(메인 보호자)는 반려노트/일부 소유권 검증에서 사용되므로 함께 변경
+    pet.changeOwner(newOwner.getUser());
+
+    // 스왑 후 전체 보호자 목록 반환
+    return petConverter.toGuardianResponseList(petGuardianRepository.findByPetIdOrderByIdAsc(petId));
   }
 
   @Transactional

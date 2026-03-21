@@ -7,6 +7,7 @@ import com.newleaseonlife.SafeDogBe.domain.term.dto.response.TermResponse;
 import com.newleaseonlife.SafeDogBe.domain.term.dto.response.UserTermResponse;
 import com.newleaseonlife.SafeDogBe.domain.term.entity.Term;
 import com.newleaseonlife.SafeDogBe.domain.term.entity.UserTerm;
+import com.newleaseonlife.SafeDogBe.domain.term.entity.enums.TermType;
 import com.newleaseonlife.SafeDogBe.domain.term.repository.TermRepository;
 import com.newleaseonlife.SafeDogBe.domain.term.repository.UserTermRepository;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
@@ -50,6 +51,40 @@ public class TermService {
         log.debug("[TermService] getUserTerms userId={}", userId);
         List<UserTerm> userTerms = userTermRepository.findAllByUserId(userId);
         return termConverter.toUserTermResponseList(userTerms);
+    }
+
+    /** 마케팅 수신 동의 여부 조회 */
+    public boolean getMarketingConsent(Long userId) {
+        UserTerm existing = userTermRepository
+                .findByUser_IdAndTerm_Type(userId, TermType.MARKETING)
+                .orElse(null);
+        return existing != null && existing.isAgreed();
+    }
+
+    /** 마케팅 수신 동의 여부 변경 (필수 약관 검증 로직 없음) */
+    @Transactional
+    public boolean updateMarketingConsent(Long userId, boolean agreed) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        Term marketingTerm = termRepository.findByType(TermType.MARKETING)
+                .orElseThrow(() -> new BusinessException(TermErrorCode.TERM_NOT_FOUND));
+
+        UserTerm existing = userTermRepository
+                .findByUser_IdAndTerm_Type(userId, TermType.MARKETING)
+                .orElse(null);
+
+        if (existing != null) {
+            existing.updateAgreed(agreed);
+            return existing.isAgreed();
+        }
+
+        userTermRepository.save(UserTerm.builder()
+                .user(user)
+                .term(marketingTerm)
+                .agreed(agreed)
+                .build());
+        return agreed;
     }
 
     /** 약관 일괄 동의. 필수 약관 미동의 시 REQUIRED_TERM_NOT_AGREED. 기존 UserTerm은 update, 없으면 생성 */

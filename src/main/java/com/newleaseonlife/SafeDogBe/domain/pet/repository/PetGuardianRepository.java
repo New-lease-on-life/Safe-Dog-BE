@@ -25,4 +25,7 @@ public interface PetGuardianRepository extends JpaRepository<PetGuardian, Long> 
 
     /** 특정 회원이 주어진 역할(OWNER 등)로 등록된 반려동물이 있는지 여부. 탈퇴 방어 등에서 사용 */
     boolean existsByUser_IdAndRole(Long userId, PetGuardianRole role);
+
+    /** 특정 회원이 주어진 역할로 등록된 반려동물(보호자 연결) 목록 */
+    List<PetGuardian> findByUser_IdAndRole(Long userId, PetGuardianRole role);
 }
