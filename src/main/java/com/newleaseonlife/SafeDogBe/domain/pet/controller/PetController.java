@@ -148,4 +148,21 @@ public class PetController {
         petService.removeGuardian(petId, principal.getUser().getId(), guardianUserId);
         return ResponseEntity.noContent().build();
     }
+
+    @Operation(
+            summary = "관리자(OWNER) 변경",
+            description = "현재 OWNER만 가능. 선택한 구성원을 OWNER로 전환하고 기존 OWNER는 CAREGIVER가 됩니다.")
+    @PostMapping("/{petId}/guardians/{newOwnerUserId}/make-owner")
+    public ResponseEntity<List<PetGuardianResponse>> makeOwner(
+            @AuthenticationPrincipal CustomPrincipal principal,
+            @PathVariable Long petId,
+            @PathVariable Long newOwnerUserId) {
+        Long currentUserId = principal.getUser().getId();
+        log.info("[PetController] makeOwner petId={}, currentOwnerUserId={}, newOwnerUserId={}",
+                petId, currentUserId, newOwnerUserId);
+
+        List<PetGuardianResponse> response =
+                petService.changePetOwner(petId, currentUserId, newOwnerUserId);
+        return ResponseEntity.ok(response);
+    }
 }

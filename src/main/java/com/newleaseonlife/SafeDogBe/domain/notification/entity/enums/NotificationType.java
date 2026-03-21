@@ -19,6 +19,7 @@ public enum NotificationType {
   PETNOTE_CREATED("반려노트 등록", "새로운 반려노트가 등록되었어요"),
   PETNOTE_UPDATED("반려노트 수정", "반려노트가 수정되었어요"),
   MEMO_ADDED("메모 추가", "새로운 메모가 추가되었어요"),
+  MARKETING("마케팅 알림", "마케팅 정보 알림입니다."),
   SYSTEM("시스템 알림", "시스템 알림입니다");
 
   private final String label;

@@ -207,4 +207,9 @@ public class Pet {
     if (diseases != null)
       this.diseases.addAll(diseases);
   }
+
+  /** 관리자(메인 보호자) 변경을 위한 소유자 업데이트 */
+  public void changeOwner(User newOwner) {
+    this.user = newOwner;
+  }
 }

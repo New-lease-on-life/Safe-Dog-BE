@@ -60,4 +60,9 @@ public class PetGuardian {
         this.pet = pet;
         this.role = role;
     }
+
+    /** OWNER <-> CAREGIVER 권한 전환을 위한 역할 변경 */
+    public void changeRole(PetGuardianRole newRole) {
+        this.role = newRole;
+    }
 }
