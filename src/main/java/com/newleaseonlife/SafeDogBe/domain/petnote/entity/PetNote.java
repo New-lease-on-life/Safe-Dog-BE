@@ -1,6 +1,7 @@
 package com.newleaseonlife.SafeDogBe.domain.petnote.entity;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.Pet;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.global.common.BaseTimeEntity;
 
 import jakarta.persistence.Column;
@@ -54,11 +55,22 @@ public class PetNote extends BaseTimeEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    /** 작성자. 탈퇴 시 SET NULL 처리 */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "written_by", foreignKey = @ForeignKey(name = "fk_pet_notes_writer"))
+    private User writtenBy;
+
+    /** 연결된 체크리스트 ID. 케어 완료와 연결된 메모에서 사용 (optional) */
+    @Column(name = "linked_checklist_id")
+    private Long linkedChecklistId;
+
     @Builder
-    public PetNote(Pet pet, LocalDate noteDate, String content) {
+    public PetNote(Pet pet, LocalDate noteDate, String content, User writtenBy, Long linkedChecklistId) {
         this.pet = pet;
         this.noteDate = noteDate;
         this.content = content;
+        this.writtenBy = writtenBy;
+        this.linkedChecklistId = linkedChecklistId;
     }
 
     /** 편의 메서드: petId가 필요한 경우를 위해 제공 */

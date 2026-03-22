@@ -9,6 +9,8 @@ import com.newleaseonlife.SafeDogBe.domain.pet.dto.response.PetResponse;
 import com.newleaseonlife.SafeDogBe.domain.pet.service.PetService;
 import com.newleaseonlife.SafeDogBe.domain.user.dto.response.UserResponse;
 import com.newleaseonlife.SafeDogBe.domain.user.service.UserService;
+import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
+import com.newleaseonlife.SafeDogBe.global.error.domain.MypageErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,7 +33,11 @@ public class MypageService {
    * - 반려동물 scope(OWNER/SHARED)에 따른 목록(오래된 순)
    * - 각 반려동물의 보호자 목록
    */
-  public MypageResponse getMypage(Long userId, MypagePetScope petScope) {
+  /**
+   * @param petScopeQuery GET 파라미터 petScope 원문 (null/공백 → OWNER, 그 외 OWNER·SHARED만 허용)
+   */
+  public MypageResponse getMypage(Long userId, String petScopeQuery) {
+    MypagePetScope petScope = resolvePetScope(petScopeQuery);
     UserResponse user = userService.findById(userId);
 
     List<PetResponse> pets = (petScope == MypagePetScope.SHARED)
@@ -56,6 +62,17 @@ public class MypageService {
         .user(user)
         .pets(petSections)
         .build();
+  }
+
+  private MypagePetScope resolvePetScope(String value) {
+    if (value == null || value.isBlank()) {
+      return MypagePetScope.OWNER;
+    }
+    try {
+      return MypagePetScope.valueOf(value.trim().toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new BusinessException(MypageErrorCode.MYPAGE_INVALID_PET_SCOPE);
+    }
   }
 
   private MypageGuardianPermissionResponse toPermissionResponse(PetGuardianResponse guardian) {

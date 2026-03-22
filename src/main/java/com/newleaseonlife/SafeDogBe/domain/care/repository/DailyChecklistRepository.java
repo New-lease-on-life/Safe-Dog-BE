@@ -29,4 +29,13 @@ public interface DailyChecklistRepository extends JpaRepository<DailyChecklist, 
   List<LocalDate> findDistinctDatesByPetIdAndDateBetween(@Param("petId") Long petId,
       @Param("from") LocalDate from,
       @Param("to") LocalDate to);
+
+  /** 홈 진행률: 특정 날짜의 전체 체크리스트 수 */
+  long countByPet_IdAndTargetDate(Long petId, LocalDate targetDate);
+
+  /** 홈 진행률: 특정 날짜의 완료된 체크리스트 수 */
+  long countByPet_IdAndTargetDateAndIsCompleted(Long petId, LocalDate targetDate, boolean isCompleted);
+
+  /** 홈 체크리스트 존재 여부 */
+  boolean existsByPet_IdAndTargetDate(Long petId, LocalDate targetDate);
 }

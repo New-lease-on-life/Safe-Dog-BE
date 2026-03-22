@@ -4,12 +4,12 @@ import com.newleaseonlife.SafeDogBe.domain.mypage.dto.response.MypageResponse;
 import com.newleaseonlife.SafeDogBe.domain.mypage.dto.response.MypageMarketingConsentResponse;
 import com.newleaseonlife.SafeDogBe.domain.mypage.dto.request.MypageMarketingConsentRequest;
 import com.newleaseonlife.SafeDogBe.domain.notification.service.NotificationService;
-import com.newleaseonlife.SafeDogBe.domain.mypage.enums.MypagePetScope;
 import com.newleaseonlife.SafeDogBe.domain.term.service.TermService;
 import com.newleaseonlife.SafeDogBe.domain.mypage.service.MypageService;
 import com.newleaseonlife.SafeDogBe.global.security.CustomPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -40,9 +40,8 @@ public class MypageController {
       @RequestParam(defaultValue = "OWNER") String petScope,
       @AuthenticationPrincipal CustomPrincipal principal) {
     Long userId = principal.getUser().getId();
-    MypagePetScope scope = MypagePetScope.from(petScope);
     log.info("[MypageController] getMypage userId={}", userId);
-    return ResponseEntity.ok(mypageService.getMypage(userId, scope));
+    return ResponseEntity.ok(mypageService.getMypage(userId, petScope));
   }
 
   @Operation(summary = "마케팅 정보 수신 동의 조회", description = "마이페이지 마케팅 수신 ON/OFF 현재 상태를 반환합니다.")

@@ -8,10 +8,13 @@ import com.newleaseonlife.SafeDogBe.domain.petnote.dto.request.PetNoteUpdateRequ
 import com.newleaseonlife.SafeDogBe.domain.petnote.dto.response.PetNoteResponse;
 import com.newleaseonlife.SafeDogBe.domain.petnote.entity.PetNote;
 import com.newleaseonlife.SafeDogBe.domain.petnote.repository.PetNoteRepository;
+import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
+import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
 import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.PetErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.PetNoteErrorCode;
+import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +37,7 @@ public class PetNoteService {
 
     private final PetNoteRepository petNoteRepository;
     private final PetRepository petRepository;
+    private final UserRepository userRepository;
     private final PetNoteConverter petNoteConverter;
 
     /** 반려동물별 노트 목록(날짜 최신순). 소유자만 조회 가능 */
@@ -67,10 +71,14 @@ public class PetNoteService {
                 }
                 return new BusinessException(PetErrorCode.PET_ACCESS_DENIED);
             });
+        User writer = userRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
         PetNote note = PetNote.builder()
             .pet(pet)
             .noteDate(request.getNoteDate())
             .content(request.getContent())
+            .writtenBy(writer)
+            .linkedChecklistId(request.getLinkedChecklistId())
             .build();
         PetNote saved = petNoteRepository.save(note);
         return petNoteConverter.toResponse(saved);
