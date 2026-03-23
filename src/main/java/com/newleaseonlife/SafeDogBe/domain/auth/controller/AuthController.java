@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Auth", description = "인증 및 회원가입 API (Naver 소셜 로그인 전용)")
+@Tag(name = "Auth 도메인(개발완_v1)", description = "인증 및 회원가입 API (Naver 소셜 로그인 전용)")
 @Slf4j
 @Validated
 @RestController
