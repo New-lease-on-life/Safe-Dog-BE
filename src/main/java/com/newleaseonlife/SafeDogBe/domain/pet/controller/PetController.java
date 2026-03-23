@@ -4,6 +4,10 @@ import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
 import com.newleaseonlife.SafeDogBe.global.error.domain.CommonErrorCode;
 import com.newleaseonlife.SafeDogBe.global.error.domain.FormValidationCode;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.dto.request.GuardianAddRequest;
@@ -38,7 +42,7 @@ import java.util.List;
  * 반려동물(Pet) API. CRUD 및 보호자(Guardian) 추가·삭제·목록 조회.
  * 소유자만 수정·삭제·보호자 관리 가능.
  */
-@Tag(name = "Pet", description = "반려동물 등록·조회·수정·삭제, 공동 보호자 관리 API")
+@Tag(name = "Pet 도메인(개발완)", description = "반려동물 등록·조회·수정·삭제, 공동 보호자 관리 API")
 @Slf4j
 @Validated
 @RestController
@@ -48,7 +52,10 @@ public class PetController {
 
     private final PetService petService;
 
-    @Operation(summary = "내 반려동물 목록 조회", description = "소유한 Pet만 반환(최신순)")
+    @Operation(summary = "내 반려동물 목록 조회", description = "소유하거나 공유받은 Pet 목록을 반환합니다(최신순).")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "조회 성공")
+    })
     @GetMapping
     public ResponseEntity<List<PetResponse>> getMyPets(
             @AuthenticationPrincipal CustomPrincipal principal) {
@@ -57,7 +64,13 @@ public class PetController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "반려동물 단건 조회", description = "소유자만 가능")
+    @Operation(summary = "반려동물 단건 조회", description = "권한(OWNER)이 있는 반려동물의 상세 정보를 조회합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "조회 성공"),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        }))
+    })
     @GetMapping("/{petId}")
     public ResponseEntity<PetResponse> getPet(
             @AuthenticationPrincipal CustomPrincipal principal,
@@ -67,7 +80,22 @@ public class PetController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "반려동물 등록", description = "요청자가 메인 보호자(OWNER)로 저장. 질병 입력 시 CareTemplate 자동 생성")
+    //--------------------------반려동물 등록---------------------
+
+    @Operation(summary = "반려동물 등록", description = "신규 반려동물을 등록합니다. 등록 시 요청 유저가 OWNER로 자동 설정됩니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "등록 성공"),
+        @ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "필수값 누락", value = "{\"code\": 400, \"message\": \"잘못된 요청 데이터입니다.\"}")
+        })),
+        @ApiResponse(responseCode = "404", description = "사용자 조회 실패", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "유저 없음", value = "{\"code\": 404, \"message\": \"사용자를 찾을 수 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "409", description = "데이터 중복", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "이름 중복", value = "{\"code\": 409, \"message\": \"이미 동일한 이름의 반려동물이 등록되어 있습니다.\"}"),
+            @ExampleObject(name = "등록번호 중복", value = "{\"code\": 409, \"message\": \"이미 등록된 반려동물 등록번호입니다.\"}")
+        }))
+    })
     @PostMapping
     public ResponseEntity<PetResponse> createPet(
             @AuthenticationPrincipal CustomPrincipal principal,
@@ -77,19 +105,28 @@ public class PetController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "반려동물 정보 수정", description = "소유자만 가능. null 필드는 변경하지 않음")
+    //--------------------------반려동물 수정--------------------
+    @Operation(summary = "반려동물 정보 수정", description = "반려동물 정보를 수정합니다. 소유자(OWNER) 권한이 필요하며, 수정 시 이름/등록번호 중복 검사를 재수행합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "수정 성공"),
+        @ApiResponse(responseCode = "400", description = "입력값 검증 실패", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "이름 누락", value = "{\"code\": 400, \"message\": \"반려동물 이름은 필수 입력값입니다.\"}"),
+            @ExampleObject(name = "생일 누락", value = "{\"code\": 400, \"message\": \"반려동물 생일은 필수 입력값입니다.\"}")
+        })),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "409", description = "데이터 중복", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "이름 중복", value = "{\"code\": 409, \"message\": \"이미 동일한 이름의 반려동물이 등록되어 있습니다.\"}"),
+            @ExampleObject(name = "등록번호 중복", value = "{\"code\": 409, \"message\": \"이미 등록된 반려동물 등록번호입니다.\"}")
+        }))
+    })
     @PatchMapping("/{petId}")
     public ResponseEntity<PetResponse> updatePet(
             @AuthenticationPrincipal CustomPrincipal principal,
             @PathVariable Long petId,
             @Valid @RequestBody PetUpdateRequest request) {
 
-        // 1. 권한 확인 (관리자 여부)
-        if (!petService.isAdminOfPet(petId, principal.getUser().getId())) {
-            throw new BusinessException(CommonErrorCode.NO_PERMISSION);
-        }
-
-        // 2. 입력값 검증
         validatePetUpdateRequest(request);
 
         PetResponse response = petService.update(petId, principal.getUser().getId(), request);
@@ -106,7 +143,13 @@ public class PetController {
         }
     }
 
-    @Operation(summary = "반려동물 삭제", description = "소유자만 가능. 보호자 연결(pet_guardian) 함께 삭제")
+    @Operation(summary = "반려동물 삭제", description = "소유자만 삭제 가능합니다. 관련된 보호자 연결 정보도 함께 삭제됩니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "삭제 성공"),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        }))
+    })
     @DeleteMapping("/{petId}")
     public ResponseEntity<Void> deletePet(
             @AuthenticationPrincipal CustomPrincipal principal,
@@ -116,7 +159,13 @@ public class PetController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "보호자 목록 조회", description = "소유자만 가능")
+    @Operation(summary = "보호자 목록 조회", description = "해당 반려동물에 등록된 보호자 목록을 조회합니다. 소유자 권한이 필요합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "조회 성공"),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        }))
+    })
     @GetMapping("/{petId}/guardians")
     public ResponseEntity<List<PetGuardianResponse>> getGuardians(
             @AuthenticationPrincipal CustomPrincipal principal,
@@ -126,7 +175,19 @@ public class PetController {
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "보호자 추가 (userId 직접)", description = "소유자만 가능. 이미 등록된 사용자면 409. 초대 코드 기반은 POST /api/invites/{code}/join 사용")
+    @Operation(summary = "보호자 직접 추가", description = "소유자가 특정 유저를 보호자로 직접 추가합니다. 이미 등록된 유저인 경우 409 에러가 발생합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "201", description = "추가 성공"),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "404", description = "대상 유저 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "유저 조회 실패", value = "{\"code\": 404, \"message\": \"사용자를 찾을 수 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "409", description = "보호자 중복", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "이미 등록된 보호자", value = "{\"code\": 409, \"message\": \"이미 해당 반려동물의 보호자로 등록된 사용자입니다.\"}")
+        }))
+    })
     @PostMapping("/{petId}/guardians")
     public ResponseEntity<PetGuardianResponse> addGuardian(
             @AuthenticationPrincipal CustomPrincipal principal,
@@ -137,7 +198,16 @@ public class PetController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @Operation(summary = "보호자 제거", description = "소유자만 가능. guardianUserId의 보호자 연결만 삭제")
+    @Operation(summary = "보호자 제거", description = "소유자가 특정 보호자를 삭제합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "제거 성공"),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "404", description = "삭제 대상 보호자 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "보호자 찾을 수 없음", value = "{\"code\": 404, \"message\": \"등록된 보호자 정보를 찾을 수 없습니다.\"}")
+        }))
+    })
     @DeleteMapping("/{petId}/guardians/{guardianUserId}")
     public ResponseEntity<Void> removeGuardian(
             @AuthenticationPrincipal CustomPrincipal principal,
@@ -149,9 +219,17 @@ public class PetController {
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(
-            summary = "관리자(OWNER) 변경",
-            description = "현재 OWNER만 가능. 선택한 구성원을 OWNER로 전환하고 기존 OWNER는 CAREGIVER가 됩니다.")
+    @Operation(summary = "관리자(OWNER) 변경", description = "현재 OWNER가 다른 보호자에게 OWNER 권한을 넘기고 CAREGIVER로 변경됩니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "권한 변경 성공"),
+        @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "변경 권한 없음", value = "{\"code\": 403, \"message\": \"해당 권한이 없습니다.\"}"), // CommonErrorCode.NO_PERMISSION
+            @ExampleObject(name = "접근 권한 부족", value = "{\"code\": 403, \"message\": \"해당 반려동물에 접근 권한이 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "404", description = "보호자 정보 없음", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "새 소유자/기존 소유자 찾을 수 없음", value = "{\"code\": 404, \"message\": \"등록된 보호자 정보를 찾을 수 없습니다.\"}")
+        }))
+    })
     @PostMapping("/{petId}/guardians/{newOwnerUserId}/make-owner")
     public ResponseEntity<List<PetGuardianResponse>> makeOwner(
             @AuthenticationPrincipal CustomPrincipal principal,

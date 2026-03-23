@@ -11,11 +11,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
-/** 수정 3월 18일
- * 반려동물 응답 DTO.
- *
- * ✅ 추가: weight, isWeightUnknown, registrationNumber,
- *          isBirthDateUnknown, hasAllergy, allergyDescription
+/**
+ * 3월 18일 수정 ✅ 추가: weight, isWeightUnknown, registrationNumber, isBirthDateUnknown, hasAllergy, allergyDescription
+ * 3월 23일 수정 ✅ 수정: breed 단일 필드를 breedCode(DB 식별용)와 breedName(화면 표출용)으로 분리
  */
 @Getter
 @Builder
@@ -24,10 +22,14 @@ import java.util.Set;
 public class PetResponse {
 
     private Long id;
-    private Long userId;
+    private Long userId; // 메인 보호자 ID
     private String name;
     private SpeciesType species;
-    private String breed;
+
+    // ✅ 분리된 품종 필드 적용
+    private String breedCode; // 예: "MALTESE", "ETC"
+    private String breedName; // 예: "말티즈", "말티푸(직접입력)"
+
     private LocalDate birthDate;
     private boolean isBirthDateUnknown;
     private Gender gender;

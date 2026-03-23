@@ -9,9 +9,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/** 3월 18일 수정
- * ✅ 추가: weight, isWeightUnknown, registrationNumber,
- *          isBirthDateUnknown, hasAllergy, allergyDescription 매핑
+/** * 3월 18일 수정 ✅ 추가: weight, isWeightUnknown, registrationNumber, isBirthDateUnknown, hasAllergy, allergyDescription 매핑
+ * 3월 23일 수정 ✅ 수정: breed 단일 필드 매핑을 breedCode와 breedName 매핑으로 분리 적용
  */
 @Component
 public class PetConverter {
@@ -22,7 +21,11 @@ public class PetConverter {
             .userId(pet.getUser().getId())
             .name(pet.getName())
             .species(pet.getSpecies())
-            .breed(pet.getBreed())
+
+            // ✅ 수정된 품종 필드 매핑
+            .breedCode(pet.getBreedCode())
+            .breedName(pet.getBreedName())
+
             .birthDate(pet.getBirthDate())
             .isBirthDateUnknown(pet.isBirthDateUnknown())
             .gender(pet.getGender())
