@@ -23,4 +23,6 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
 
     /** 해당 반려동물이 해당 사용자 소유인지 여부 */
     boolean existsByIdAndUserId(Long id, Long userId);
+    /** 등록번호 중복 여부 확인 */
+    boolean existsByRegistrationNumber(String registrationNumber);
 }

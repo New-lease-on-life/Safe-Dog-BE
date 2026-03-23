@@ -3,6 +3,7 @@ package com.newleaseonlife.SafeDogBe.domain.pet.dto.response;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.SpeciesType;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -25,7 +26,7 @@ public class PetResponse {
     private Long id;
     private Long userId;
     private String name;
-    private String species;
+    private SpeciesType species;
     private String breed;
     private LocalDate birthDate;
     private boolean isBirthDateUnknown;

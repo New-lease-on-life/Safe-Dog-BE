@@ -110,11 +110,20 @@ public class PetService {
         .isPresent();
   }
 
+// ---------------반려동물 생성(등록) ----------------------
   @Transactional
   public PetResponse create(Long userId, PetCreateRequest req) {
     log.info("[PetService] create userId={}, name={}", userId, req.getName());
+    // 유저 검증
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+    // 등록번호 중복 체크
+    if (req.getRegistrationNumber() != null && !req.getRegistrationNumber().isBlank()) {
+      if (petRepository.existsByRegistrationNumber(req.getRegistrationNumber())) {
+        throw new BusinessException(PetErrorCode.DUPLICATE_REGISTRATION_NUMBER);
+      }
+    }
 
     Set<PetDisease> diseases = req.getDiseases() != null ? req.getDiseases() : Set.of();
 
@@ -150,10 +159,31 @@ public class PetService {
       createDefaultCareTemplates(pet, diseases);
     }
 
-    log.info("[PetService] create 완료 petId={}", pet.getId());
     return petConverter.toResponse(pet);
   }
 
+  /**
+   * 질병별 기본 DISEASE_CARE 케어 템플릿 생성.
+   * ✅ 변경: 기존 MEDICINE/HOSPITAL 타입 → DISEASE_CARE 타입 ✅ 변경: defaultTemplates() → defaultCheckItems()
+   * 기반으로 각 체크 항목을 개별 CareTemplate으로 생성
+   */
+  private void createDefaultCareTemplates(Pet pet, Set<PetDisease> diseases) {
+    List<CareTemplate> templates = new ArrayList<>();
+    for (PetDisease disease : diseases) {
+      for (String checkItem : disease.getDefaultCheckItems()) {
+        templates.add(CareTemplate.builder()
+            .pet(pet)
+            .careType(CareType.DISEASE_CARE)
+            .title("[" + disease.getDescription() + "] " + checkItem)
+            // 주기 미설정 → 매일 생성
+            .build());
+      }
+    }
+    careTemplateRepository.saveAll(templates);
+    log.info("[PetService] 질병 기반 CareTemplate {}개 자동 생성 petId={}", templates.size(), pet.getId());
+  }
+
+  // --------------------반려동물 수정----------------------
   @Transactional
   public PetResponse update(Long petId, Long userId, PetUpdateRequest req) {
     log.info("[PetService] update petId={}, userId={}", petId, userId);
@@ -265,27 +295,7 @@ public class PetService {
     log.info("[PetService] removeGuardian 완료 guardianId={}", guardian.getId());
   }
 
-  /**
-   * 질병별 기본 DISEASE_CARE 케어 템플릿 생성.
-   * <p>
-   * ✅ 변경: 기존 MEDICINE/HOSPITAL 타입 → DISEASE_CARE 타입 ✅ 변경: defaultTemplates() → defaultCheckItems()
-   * 기반으로 각 체크 항목을 개별 CareTemplate으로 생성
-   */
-  private void createDefaultCareTemplates(Pet pet, Set<PetDisease> diseases) {
-    List<CareTemplate> templates = new ArrayList<>();
-    for (PetDisease disease : diseases) {
-      for (String checkItem : disease.getDefaultCheckItems()) {
-        templates.add(CareTemplate.builder()
-            .pet(pet)
-            .careType(CareType.DISEASE_CARE)
-            .title("[" + disease.getDescription() + "] " + checkItem)
-            // 주기 미설정 → 매일 생성
-            .build());
-      }
-    }
-    careTemplateRepository.saveAll(templates);
-    log.info("[PetService] 질병 기반 CareTemplate {}개 자동 생성 petId={}", templates.size(), pet.getId());
-  }
+
 
   private Pet getPetAsOwnerOrThrow(Long petId, Long userId) {
     // 1. PetGuardian 테이블을 조회하여 해당 유저가 이 반려동물의 권한이 있는지 확인

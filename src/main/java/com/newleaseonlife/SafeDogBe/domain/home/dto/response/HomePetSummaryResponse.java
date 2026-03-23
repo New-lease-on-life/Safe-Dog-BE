@@ -1,5 +1,6 @@
 package com.newleaseonlife.SafeDogBe.domain.home.dto.response;
 
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.SpeciesType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,7 +20,7 @@ public class HomePetSummaryResponse {
     private String profileImageUrl;
     private LocalDate birthDate;
     private boolean isBirthDateUnknown;
-    private String species;
+    private SpeciesType species;
 
     /** OWNER: 직접 등록, SHARED: 공유받은 반려동물 */
     private String registrationType;

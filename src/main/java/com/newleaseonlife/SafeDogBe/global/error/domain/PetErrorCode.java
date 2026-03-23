@@ -21,7 +21,8 @@ public enum PetErrorCode implements ApiCode {
     /** 존재하지 않는 초대 코드 */
     INVITE_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, 404, "유효하지 않은 초대 코드입니다."),
     /** 만료되었거나 이미 사용된 초대 코드 */
-    INVITE_CODE_EXPIRED_OR_USED(HttpStatus.BAD_REQUEST, 400, "만료되었거나 이미 사용된 초대 코드입니다.");
+    INVITE_CODE_EXPIRED_OR_USED(HttpStatus.BAD_REQUEST, 400, "만료되었거나 이미 사용된 초대 코드입니다."),
+    DUPLICATE_REGISTRATION_NUMBER(HttpStatus.CONFLICT, 409, "이미 등록된 반려동물 등록번호입니다.");
 
     private final HttpStatus httpStatus;
     private final Integer code;

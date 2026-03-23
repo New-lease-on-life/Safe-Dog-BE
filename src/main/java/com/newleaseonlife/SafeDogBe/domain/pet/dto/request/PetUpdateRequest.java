@@ -3,6 +3,7 @@ package com.newleaseonlife.SafeDogBe.domain.pet.dto.request;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
 
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.SpeciesType;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
@@ -27,7 +28,7 @@ public class PetUpdateRequest {
     private String name;
 
     @Size(max = 50)
-    private String species;
+    private SpeciesType species;
 
     @Size(max = 100)
     private String breed;

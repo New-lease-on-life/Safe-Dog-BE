@@ -2,6 +2,7 @@ package com.newleaseonlife.SafeDogBe.domain.pet.entity;
 
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.Gender;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetDisease;
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.SpeciesType;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 
 import jakarta.persistence.*;
@@ -42,25 +43,39 @@ public class Pet {
   @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_pets_user"))
   private User user;
 
+  //--------------step 1---------------------------
+
+  @Column(columnDefinition = "TEXT")
+  private String profileImageUrl;
+
+  /** 반려 동물 이름 */
   @Column(nullable = false, length = 100)
   private String name;
 
-  /**
-   * 종 (강아지/고양이)
-   */
-  @Column(length = 50)
-  private String species;
-
-  @Column(length = 100)
-  private String breed;
-
+  /**출생일*/
   private LocalDate birthDate;
 
-  /**
-   * 출생일을 모르는 경우 true. true이면 birthDate는 null
-   */
+  /** 출생일을 모르는 경우 true. true이면 birthDate는 null */
   @Column(nullable = false)
   private boolean isBirthDateUnknown = false;
+
+  /** 체중 (kg). 소수점 1자리까지 허용. isWeightUnknown=true이면 null 허용.*/
+  @Column(precision = 5, scale = 1)
+  private BigDecimal weight;
+
+  /** 체중을 모르는 경우 true. true이면 weight는 null */
+  @Column(nullable = false)
+  private boolean isWeightUnknown = false;
+
+//------------stem 2--------------
+  /** 종 (강아지/고양이) 구분  */
+  @Enumerated(EnumType.STRING)
+  @Column(length = 10)
+  private SpeciesType species;
+
+  // TODO: 바텀 시트는 어떻게 처리가 되는것인가?
+  @Column(length = 100)
+  private String breed;
 
   @Enumerated(EnumType.STRING)
   @Column(length = 10)
@@ -70,37 +85,12 @@ public class Pet {
   private boolean isNeutered = false;
 
   /**
-   * 체중 (kg). 소수점 1자리까지 허용. isWeightUnknown=true이면 null 허용.
-   */
-  @Column(precision = 5, scale = 1)
-  private BigDecimal weight;
-
-  /**
-   * 체중을 모르는 경우 true. true이면 weight는 null
-   */
-  @Column(nullable = false)
-  private boolean isWeightUnknown = false;
-
-  /**
    * 동물등록번호. 숫자만, 최대 15자리. 선택 입력.
    */
   @Column(length = 15)
   private String registrationNumber;
 
-  /**
-   * 알레르기 여부. 기획서 step3 알레르기 '있어요/없어요'
-   */
-  private Boolean hasAllergy;
-
-  /**
-   * 알레르기 직접 입력 내용. hasAllergy=true일 때만 사용.
-   */
-  @Column(columnDefinition = "TEXT")
-  private String allergyDescription;
-
-  @Column(columnDefinition = "TEXT")
-  private String profileImageUrl;
-
+  //----------step 3---------
   /**
    * 질병 목록. 최대 5개. pet_diseases 별도 테이블. ElementCollection은 Pet → 단방향이므로 원칙 준수.
    */
@@ -113,6 +103,15 @@ public class Pet {
   @Column(name = "disease", length = 30, nullable = false)
   private Set<PetDisease> diseases = new HashSet<>();
 
+  /** 알레르기 여부. 기획서 step3 알레르기 '있어요/없어요'  */
+  private Boolean hasAllergy;
+
+  /**
+   * 알레르기 직접 입력 내용. hasAllergy=true일 때만 사용.
+   */
+  @Column(columnDefinition = "TEXT")
+  private String allergyDescription;
+
   @CreatedDate
   @Column(nullable = false, updatable = false)
   private LocalDateTime createdAt;
@@ -122,7 +121,7 @@ public class Pet {
   private LocalDateTime updatedAt;
 
   @Builder
-  public Pet(User user, String name, String species, String breed,
+  public Pet(User user, String name, SpeciesType species, String breed,
       LocalDate birthDate, boolean isBirthDateUnknown,
       Gender gender, boolean isNeutered,
       BigDecimal weight, boolean isWeightUnknown,
@@ -151,7 +150,7 @@ public class Pet {
   /**
    * 정보 수정. null이 아닌 필드만 반영
    */
-  public void update(String name, String species, String breed,
+  public void update(String name, SpeciesType species, String breed,
       LocalDate birthDate, Boolean isBirthDateUnknown,
       Gender gender, Boolean isNeutered,
       BigDecimal weight, Boolean isWeightUnknown,
