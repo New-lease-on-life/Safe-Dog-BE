@@ -1,55 +1,42 @@
 package com.newleaseonlife.SafeDogBe.domain.auth.controller;
 
+import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.RefreshTokenRequest;
+import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
+import com.newleaseonlife.SafeDogBe.domain.auth.service.AuthService;
 import com.newleaseonlife.SafeDogBe.domain.auth.service.dto.SocialSignupCompleteRequest;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserRole;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
-import com.newleaseonlife.SafeDogBe.global.error.domain.UserErrorCode;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.CheckDuplicateRequest;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.RefreshTokenRequest;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.request.SocialLinkRequest;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.DeviceLoginProviderResponse;
-import com.newleaseonlife.SafeDogBe.domain.auth.dto.response.TokenResponse;
-import com.newleaseonlife.SafeDogBe.domain.auth.service.AuthService;
-import com.newleaseonlife.SafeDogBe.domain.user.service.UserService;
 import com.newleaseonlife.SafeDogBe.global.error.BusinessException;
 import com.newleaseonlife.SafeDogBe.global.error.domain.AuthErrorCode;
 import com.newleaseonlife.SafeDogBe.global.security.CookieUtils;
 import com.newleaseonlife.SafeDogBe.global.security.CustomPrincipal;
-
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
-
-
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 인증 API. 회원가입·로컬 로그인·토큰 갱신·로그아웃·중복 체크.
- * 토큰은 HttpOnly 쿠키로 발급(쿠키 우선), 바디에도 포함하여 모바일 앱도 지원.
- */
-@Tag(name = "Auth", description = "회원가입, 로그인, 토큰 관리, 소셜 계정 연결, 기기 로그인 기록 API")
+@Tag(name = "Auth", description = "인증 및 회원가입 API (Naver 소셜 로그인 전용)")
 @Slf4j
 @Validated
 @RestController
@@ -58,19 +45,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    private final UserService userService;
     private final CookieUtils cookieUtils;
     private final UserRepository userRepository;
 
-    @Operation(summary = "전화번호+이름 중복 체크", description = "중복이면 409(기존 소셜 타입 포함 메시지), 없으면 204")
-    @GetMapping("/check-duplicate")
-    public ResponseEntity<Void> checkDuplicate(@Valid CheckDuplicateRequest request) {
-        log.info("[AuthController] 중복 체크 요청 phone={}, name={}", request.phone(), request.name());
-        userService.checkDuplicateByPhoneAndName(request.phone(), request.name());
-        return ResponseEntity.noContent().build();
-    }
+    @Operation(summary = "소셜 최초 가입 완료 (온보딩)", description = "필수 약관 동의, 생년월일, 초대 코드를 받아 PENDING 상태의 회원을 ACTIVE로 전환합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "가입 완료 및 정식 회원(ACTIVE) 전환 성공"),
+        @ApiResponse(responseCode = "400", description = "잘못된 요청 데이터", content = @Content(mediaType = "application/json", examples = {
+            // Service 계층의 비즈니스 에러
+            @ExampleObject(name = "만 14세 미만", value = "{\"code\": 400, \"message\": \"만 14세 이상만 가입할 수 있습니다.\"}"),
+            @ExampleObject(name = "생년월일 누락", value = "{\"code\": 400, \"message\": \"생년월일 입력은 필수입니다.\"}"),
+            @ExampleObject(name = "필수 약관 미동의", value = "{\"code\": 400, \"message\": \"서비스 이용을 위해 필수 정보 제공이 필요합니다.\"}"),
 
-    @Operation(summary = "소셜 최초 가입 완료", description = "약관 동의와 초대 코드를 받아 PENDING 상태를 ACTIVE로 전환합니다.")
+            // Controller 계층의 @Valid 에러 (추가)
+            @ExampleObject(name = "미래 날짜 입력(@Past)", value = "{\"code\": 400, \"message\": \"생년월일은 과거의 날짜여야 합니다.\"}"),
+            @ExampleObject(name = "약관 목록 누락(@NotEmpty)", value = "{\"code\": 400, \"message\": \"약관 동의 목록은 필수입니다.\"}"),
+        })),
+        @ApiResponse(responseCode = "404", description = "회원 정보를 찾을 수 없음 (토큰 오류 등)", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "USER_NOT_FOUND", value = "{\"code\": 404, \"message\": \"사용자를 찾을 수 없습니다.\"}")
+        })),
+        @ApiResponse(responseCode = "409", description = "상태 충돌", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "이미 활성화된 회원", value = "{\"code\": 409, \"message\": \"이미 온보딩을 완료한 계정입니다.\"}")
+        }))
+    })
     @PostMapping("/social-signup-complete")
     public ResponseEntity<Void> completeSocialSignup(
         @AuthenticationPrincipal CustomPrincipal principal,
@@ -80,112 +77,92 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    @Operation(summary = "토큰 갱신", description = "쿠키 refresh_token 우선, 없으면 바디에서 읽음. 새 토큰 쿠키+바디 반환")
+    @Operation(summary = "토큰 갱신", description = "만료된 Access Token을 갱신합니다. \n" +
+        "1. 쿠키의 'refresh_token'을 최우선으로 사용합니다. \n" +
+        "2. 쿠키가 없는 환경(모바일 등)에서는 Body의 refreshToken을 사용합니다."
+        )
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "토큰 재발급 성공 (쿠키 및 바디에 포함)"),
+
+        @ApiResponse(responseCode = "404", description = "DB에서 회원 정보를 찾을 수 없음 (탈퇴 등)", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "USER_NOT_FOUND", value = "{\"code\": 404, \"message\": \"사용자를 찾을 수 없습니다.\"}")
+        })),
+
+        @ApiResponse(responseCode = "401", description = "유효하지 않거나 만료된 Refresh Token", content = @Content(mediaType = "application/json", examples = {
+            @ExampleObject(name = "INVALID_REFRESH_TOKEN", value = "{\"code\": 401, \"message\": \"유효하지 않은 리프레시 토큰입니다.\"}")
+        }))
+    })
     @PostMapping("/refresh")
     public ResponseEntity<TokenResponse> refresh(
         @RequestBody(required = false) RefreshTokenRequest request,
         HttpServletRequest httpRequest,
         HttpServletResponse httpResponse) {
-        log.info("[AuthController] refresh 요청");
-
         String refreshToken = resolveRefreshToken(httpRequest, request);
         TokenResponse tokenResponse = authService.refresh(new RefreshTokenRequest(refreshToken));
-
         cookieUtils.addAccessTokenCookie(httpResponse, tokenResponse.getAccessToken(),
             tokenResponse.getAccessTokenExpiresIn());
         cookieUtils.addRefreshTokenCookie(httpResponse, tokenResponse.getRefreshToken());
         return ResponseEntity.ok(tokenResponse);
     }
-    // 💡 앱스토어 심사 통과를 위한 백도어 API (운영 환경에서는 이메일을 통한 권한 탈취 주의)
-    @Operation(summary = "테스트 계정 로그인 및 가입(운영 환경 주의)", description = "백도어 API")
-    @PostMapping("/test-login")
-    @Transactional // DB 쓰기 작업이 있으므로 트랜잭션 추가
-    public ResponseEntity<TokenResponse> testLogin(
-        @RequestParam String email, HttpServletResponse response) {
-        log.info("[AuthController] 테스트 로그인/가입 요청 email={}", email);
-        User testUser = userRepository.findByEmail(email)
-            .orElseGet(() -> {
-                log.info("[AuthController] 테스트 계정이 존재하지 않아 새로 생성합니다. email={}", email);
 
-                // 닉네임 중복 방지를 위해 UUID나 랜덤 문자열 추가 권장
-                String randomNickname = "Tester_" + UUID.randomUUID().toString().substring(0, 8);
-
-                User newUser = User.builder()
-                    .email(email)
-                    .nickname(randomNickname)
-                    .name("Test User")
-                    .status(UserStatus.ACTIVE) // 바로 활성 상태로 생성
-                    .role(UserRole.USER)
-                    .providerType(ProviderType.LOCAL) // 백도어용으로 LOCAL 혹은 TEST 지정
-                    .build();
-
-                return userRepository.save(newUser);
-            });
-
-        // 2. 로그인 처리 (마지막 로그인 시간 업데이트 등)
-        testUser.updateLastLogin("TEST_BACKDOOR");
-        //토큰 발급
-        TokenResponse tokenResponse = authService.issueTokenResponse(testUser);
-        //쿠키세팅
-        cookieUtils.addAccessTokenCookie(response, tokenResponse.getAccessToken(), tokenResponse.getAccessTokenExpiresIn());
-        cookieUtils.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
-
-        return ResponseEntity.ok(tokenResponse);
-    }
-
-    @Operation(summary = "로그아웃", description = "쿠키 삭제 + refresh_token DB 무효화")
+    @Operation(summary = "로그아웃", description = "현재 기기에서 로그아웃 처리하며 DB의 Refresh Token을 삭제합니다.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "204", description = "로그아웃 성공 (응답 바디 없음)"),
+        @ApiResponse(responseCode = "401", description = "유효하지 않은 토큰")
+    })
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(
         @RequestBody(required = false) RefreshTokenRequest request,
         HttpServletRequest httpRequest,
         HttpServletResponse httpResponse) {
-        log.info("[AuthController] logout 요청");
-
         String refreshToken = resolveRefreshToken(httpRequest, request);
         authService.logout(refreshToken);
         cookieUtils.deleteTokenCookies(httpResponse);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "기기별 마지막 로그인 소셜 타입 조회", description = "FE 툴팁용. 등록된 기기 없으면 204")
-    /**
-     * 기기별 마지막 로그인 소셜 타입 조회. 비인증 공개 API.
-     * FE가 deviceId로 조회하여 로그인 화면에 "이전에 카카오로 로그인했어요" 툴팁 표시.
-     * 등록된 기기 없으면 204 반환.
-     */
-    @GetMapping("/devices/{deviceId}/login-provider")
-    public ResponseEntity<DeviceLoginProviderResponse> getDeviceLoginProvider(@PathVariable String deviceId) {
-        log.info("[AuthController] getDeviceLoginProvider deviceId={}", deviceId);
-        DeviceLoginProviderResponse response = authService.getDeviceLoginProvider(deviceId);
-        if (response == null) return ResponseEntity.noContent().build();
-        return ResponseEntity.ok(response);
+    @Operation(summary = "테스트 계정 로그인/가입 (🚨 운영 환경 배포 주의)",
+        description = "실제 네이버 연동 없이 강제로 유저를 생성하고 토큰을 발급하는 백도어 API입니다.")
+    @PostMapping("/test-login")
+    @Transactional
+    public ResponseEntity<TokenResponse> testLogin(
+        @RequestParam String email,
+        @RequestParam(defaultValue = "true") boolean autoActivate, // true면 바로 ACTIVE, false면 PENDING
+        HttpServletResponse response) {
+
+        log.warn("[AuthController] 🚨 테스트 로그인 API 호출됨 email={}", email);
+
+        // 1. 이메일로 기존 유저 조회, 없으면 새로 강제 생성 (네이버 우회)
+        User testUser = userRepository.findByEmail(email)
+            .orElseGet(() -> {
+                log.info("[AuthController] 테스트 계정이 존재하지 않아 새로 생성합니다. email={}", email);
+                String randomNickname = "Tester_" + UUID.randomUUID().toString().substring(0, 5);
+
+                return userRepository.save(User.builder()
+                    .email(email)
+                    .nickname(randomNickname)
+                    .name("테스트유저")
+                    .status(autoActivate ? UserStatus.ACTIVE : UserStatus.PENDING) // 상태 선택 생성
+                    .role(UserRole.USER)
+                    .providerType(ProviderType.LOCAL) // 백도어 식별용
+                    .build());
+            });
+
+        // 2. 로그인 처리 및 토큰 발급
+        testUser.updateLastLogin("TEST_BACKDOOR");
+        TokenResponse tokenResponse = authService.issueTokenResponse(testUser);
+
+        // 3. 쿠키 설정 (실제 로그인과 동일한 환경 제공)
+        cookieUtils.addAccessTokenCookie(response, tokenResponse.getAccessToken(), tokenResponse.getAccessTokenExpiresIn());
+        cookieUtils.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
+
+        return ResponseEntity.ok(tokenResponse);
     }
 
-    @Operation(summary = "기기별 로그인 소셜 타입 기록", description = "로그인 성공 후 FE가 호출. provider=KAKAO 등 전달")
-    @PutMapping("/devices/{deviceId}/login-provider")
-    public ResponseEntity<DeviceLoginProviderResponse> registerDeviceLogin(
-        @PathVariable String deviceId,
-        @RequestParam String provider) {
-        log.info("[AuthController] registerDeviceLogin deviceId={}, provider={}", deviceId, provider);
-        DeviceLoginProviderResponse response = authService.registerDeviceLogin(deviceId, provider);
-        return ResponseEntity.ok(response);
-    }
+    // (testLogin 메서드 생략 - 운영 API가 아니므로 어노테이션 최소화)
 
-    @Operation(summary = "소셜 계정 연결", description = "이미 로그인된 사용자가 추가 소셜 계정 연결. FE는 OAuth2 완료 후 providerId 전달")
-    @PostMapping("/social-accounts")
-    public ResponseEntity<Void> linkSocialAccount(
-        @AuthenticationPrincipal CustomPrincipal principal,
-        @Valid @RequestBody SocialLinkRequest request) {
-        log.info("[AuthController] linkSocialAccount userId={}, provider={}", principal.getUser().getId(), request.provider());
-        authService.linkSocialAccount(principal.getUser().getId(), request);
-        return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * refresh_token 추출: 쿠키 우선 → 요청 바디 폴백.
-     * 둘 다 없으면 INVALID_REFRESH_TOKEN 예외.
-     */
     private String resolveRefreshToken(HttpServletRequest httpRequest, RefreshTokenRequest body) {
+        // ... (기존 로직 동일)
         String fromCookie = CookieUtils.readCookie(httpRequest, CookieUtils.REFRESH_TOKEN_COOKIE);
         if (StringUtils.hasText(fromCookie)) {
             return fromCookie;

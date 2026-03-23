@@ -64,7 +64,7 @@ spring:
 jwt:
   access-token-secret: ${JWT_ACCSECRET}
   refresh-token-secret: ${JWT_REFSECRET}
-  access-token-expiration: 1800000       # 30분
+  access-token-expiration: 86400000       # 30분
   refresh-token-expiration: 7776000000   # 90일 (90 * 24 * 60 * 60 * 1000)
 
 # 로깅 설정

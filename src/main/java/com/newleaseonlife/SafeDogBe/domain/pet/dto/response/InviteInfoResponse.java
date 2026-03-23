@@ -1,5 +1,6 @@
 package com.newleaseonlife.SafeDogBe.domain.pet.dto.response;
 
+import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.SpeciesType;
 import java.time.LocalDateTime;
 
 /**
@@ -15,7 +16,7 @@ import java.time.LocalDateTime;
 public record InviteInfoResponse(
         Long petId,
         String petName,
-        String petSpecies,
+        SpeciesType petSpecies,
         String inviterName,
         LocalDateTime expiredAt
 ) {

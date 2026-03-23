@@ -50,7 +50,6 @@ public class SecurityConfig {
         config.setAllowedOrigins(allowedOrigins);
         config.addAllowedOriginPattern("*"); //테스트용 추후에 지우기
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

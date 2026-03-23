@@ -7,6 +7,7 @@ import jakarta.validation.ConstraintViolationException;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -104,6 +105,32 @@ public class GlobalExceptionHandler {
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse.of(HttpStatus.BAD_REQUEST.value(), code.getCode(), message, request.getRequestURI()));
     }
+    /**
+     * DB 제약 조건 위반 처리 (최후의 안전장치).
+     * 서비스 로직에서 체크하지 못한 중복이나 Null 위반 등을 처리한다.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException e, HttpServletRequest request) {
+        log.error("[DataIntegrityViolationException] path={}, message={}", request.getRequestURI(), e.getMessage());
+
+        // 중복 키 에러인지 확인 (벤더마다 메시지가 다르지만 보통 "Duplicate" 키워드 포함)
+        String message = "데이터 처리 중 충돌이 발생했습니다. 입력값을 확인해주세요.";
+        if (e.getMessage() != null && e.getMessage().contains("Duplicate")) {
+            message = "이미 존재하는 데이터(중복)입니다.";
+        }
+
+        ApiCode code = CommonErrorCode.BAD_REQUEST; // 혹은 409 CONFLICT 권장
+
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(ErrorResponse.of(
+                HttpStatus.BAD_REQUEST.value(),
+                code.getCode(),
+                message,
+                request.getRequestURI()
+            ));
+    }
+
 
     /** 그 외 미처리 예외 → 500 Server Error. */
     @ExceptionHandler(Exception.class)
