@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class MypageGuardianPermissionResponse {
 
   private Long userId;
+  private String nickname;
   private PetGuardianRole role;
 
   // 기능 별 권한 (FE에서 O/X 표시용)
@@ -30,4 +31,3 @@ public class MypageGuardianPermissionResponse {
   // 반려노트 등록/수정은 OWNER만 O
   private boolean canCreateOrUpdatePetNote;
 }
-

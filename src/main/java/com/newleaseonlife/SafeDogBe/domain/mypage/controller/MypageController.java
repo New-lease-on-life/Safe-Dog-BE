@@ -8,8 +8,11 @@ import com.newleaseonlife.SafeDogBe.domain.term.service.TermService;
 import com.newleaseonlife.SafeDogBe.domain.mypage.service.MypageService;
 import com.newleaseonlife.SafeDogBe.global.security.CustomPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/mypage")
 @RequiredArgsConstructor
-@Tag(name = "Mypage", description = "마이페이지 조회 API")
+@Tag(name = "Mypage 도메인(개발완)", description = "마이페이지 API")
 public class MypageController {
 
   private final MypageService mypageService;
@@ -34,7 +37,16 @@ public class MypageController {
 
   private static final String APP_VERSION = "0.0.1-SNAPSHOT";
 
-  @Operation(summary = "마이페이지 초기 조회", description = "내 프로필 + (OWNER) 반려동물 목록/보호자 목록을 반환합니다.")
+  @Operation(summary = "마이페이지 초기 조회", description = "내 프로필 + (OWNER/SHARED) 반려동물 목록 및 보호자 목록을 반환합니다.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "400", description = "잘못된 파라미터 요청", content = @Content(mediaType = "application/json", examples = {
+          @ExampleObject(name = "MYPAGE_INVALID_PET_SCOPE", value = "{\"code\": 400, \"message\": \"petScope는 OWNER 또는 SHARED만 입력할 수 있습니다.\"}")
+      })),
+      @ApiResponse(responseCode = "404", description = "회원 정보를 찾을 수 없음", content = @Content(mediaType = "application/json", examples = {
+          @ExampleObject(name = "USER_NOT_FOUND", value = "{\"code\": 404, \"message\": \"존재하지 않는 유저입니다.\"}")
+      }))
+  })
   @GetMapping
   public ResponseEntity<MypageResponse> getMypage(
       @RequestParam(defaultValue = "OWNER") String petScope,
@@ -45,6 +57,12 @@ public class MypageController {
   }
 
   @Operation(summary = "마케팅 정보 수신 동의 조회", description = "마이페이지 마케팅 수신 ON/OFF 현재 상태를 반환합니다.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "조회 성공"),
+      @ApiResponse(responseCode = "404", description = "회원 정보를 찾을 수 없음", content = @Content(mediaType = "application/json", examples = {
+          @ExampleObject(name = "USER_NOT_FOUND", value = "{\"code\": 404, \"message\": \"존재하지 않는 유저입니다.\"}")
+      }))
+  })
   @GetMapping("/marketing")
   public ResponseEntity<MypageMarketingConsentResponse> getMarketingConsent(
       @AuthenticationPrincipal CustomPrincipal principal) {
@@ -56,26 +74,36 @@ public class MypageController {
     return ResponseEntity.ok(MypageMarketingConsentResponse.of(agreed, null));
   }
 
-  @Operation(summary = "마케팅 정보 수신 동의 변경", description = "ON/OFF 변경 후 OFF일 경우 마케팅 알림 내역을 삭제합니다.")
+  @Operation(summary = "마케팅 정보 수신 동의 변경", description = "ON/OFF 변경 후 OFF일 경우 기존 마케팅 알림 내역을 삭제합니다.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "상태 변경 성공"),
+      @ApiResponse(responseCode = "404", description = "회원 정보를 찾을 수 없음", content = @Content(mediaType = "application/json", examples = {
+          @ExampleObject(name = "USER_NOT_FOUND", value = "{\"code\": 404, \"message\": \"존재하지 않는 유저입니다.\"}")
+      }))
+  })
   @PatchMapping("/marketing")
   public ResponseEntity<MypageMarketingConsentResponse> updateMarketingConsent(
       @AuthenticationPrincipal CustomPrincipal principal,
       @RequestBody MypageMarketingConsentRequest request) {
     Long userId = principal.getUser().getId();
-    boolean agreed = request.agreed();
-    boolean updated = termService.updateMarketingConsent(userId, agreed);
+    boolean requestAgreed = request.agreed();
+    // 상태 업데이트
+    boolean currentAgreed = termService.updateMarketingConsent(userId, requestAgreed);
 
-    if (!updated) {
+    // 기획: 차단(false)할 경우 알림 발송 내역에서 삭제
+    if (!requestAgreed) {
       notificationService.deleteMarketingNotifications(userId);
     }
 
-    return ResponseEntity.ok(MypageMarketingConsentResponse.of(updated, null));
+    return ResponseEntity.ok(MypageMarketingConsentResponse.of(currentAgreed, null));
   }
 
   @Operation(summary = "서비스 업데이트 버전 조회", description = "마이페이지 서비스 정보 영역에서 노출할 앱 버전을 반환합니다.")
+  @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "버전 조회 성공")
+  })
   @GetMapping("/app-version")
   public ResponseEntity<String> getAppVersion() {
     return ResponseEntity.ok(APP_VERSION);
   }
 }
-

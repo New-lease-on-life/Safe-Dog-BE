@@ -40,14 +40,14 @@ public class MypageService {
     MypagePetScope petScope = resolvePetScope(petScopeQuery);
     UserResponse user = userService.findById(userId);
 
+    // [기획 반영] 반려동물 목록: 등록된 날짜(오래된) 순 정렬
     List<PetResponse> pets = (petScope == MypagePetScope.SHARED)
         ? petService.findMySharedPetsOrderByCreatedAtAsc(userId)
         : petService.findMyPetsOrderByCreatedAtAsc(userId);
 
     List<MypagePetResponse> petSections = pets.stream()
         .map(pet -> {
-          List<PetGuardianResponse> guardians =
-              petService.getGuardiansForPet(pet.getId(), userId);
+          List<PetGuardianResponse> guardians = petService.getGuardiansForPet(pet.getId(), userId);
           List<MypageGuardianPermissionResponse> permissionResponses = guardians.stream()
               .map(this::toPermissionResponse)
               .toList();
@@ -59,7 +59,7 @@ public class MypageService {
         .toList();
 
     return MypageResponse.builder()
-        .user(user)
+        .user(user) // 프론트엔드에서 user.nickname ?? user.name으로 처리하거나 DTO에서 가공
         .pets(petSections)
         .build();
   }
@@ -78,8 +78,12 @@ public class MypageService {
   private MypageGuardianPermissionResponse toPermissionResponse(PetGuardianResponse guardian) {
     boolean isOwner = guardian.getRole() != null && guardian.getRole().name().equals("OWNER");
 
+    // [기획 반영] 탈퇴 회원 이름 처리 규칙
+    String displayName = guardian.isUserDeleted() ? "알 수 없음" : guardian.getNickname();
+
     return MypageGuardianPermissionResponse.builder()
         .userId(guardian.getUserId())
+        .nickname(displayName) // 가공된 이름 전달
         .role(guardian.getRole())
         // 동물 정보 수정/삭제/초대/관리자 변경: OWNER만 가능
         .canEditPetInfo(isOwner)

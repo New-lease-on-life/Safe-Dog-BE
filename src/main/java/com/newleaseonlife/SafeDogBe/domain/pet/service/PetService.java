@@ -64,21 +64,16 @@ public class PetService {
         petRepository.findAllByUserIdOrderByCreatedAtAsc(userId));
   }
 
-  /** 마이페이지용 공유 받은 반려동물 목록(보호자=CAREGIVER, 오래된 순) */
+  //TODO
+  /** 마이페이지용 공유 받은 반려동물 목록 (보호자=CAREGIVER, 등록일 오래된 순) */
   public List<PetResponse> findMySharedPetsOrderByCreatedAtAsc(Long userId) {
-    List<PetGuardian> caregiverGuardians =
-        petGuardianRepository.findByUser_IdAndRole(userId, PetGuardianRole.CAREGIVER);
-
-    Map<Long, Pet> petMap = new HashMap<>();
-    for (PetGuardian guardian : caregiverGuardians) {
-      Pet pet = guardian.getPet();
-      petMap.put(pet.getId(), pet);
-    }
-
-    List<Pet> pets = new ArrayList<>(petMap.values());
-    pets.sort(Comparator.comparing(Pet::getCreatedAt));
-
-    return petConverter.toResponseList(pets);
+    // [기획 반영] 타인의 초대코드를 통해 등록된(CAREGIVER) 동물만 열람
+    return petGuardianRepository.findByUser_IdAndRole(userId, PetGuardianRole.CAREGIVER).stream()
+        .map(PetGuardian::getPet)
+        .distinct() // 중복 제거
+        .sorted(Comparator.comparing(Pet::getCreatedAt)) // [기획 반영] 등록된 날짜(오래된) 순
+        .map(petConverter::toResponse)
+        .toList();
   }
 
   public PetResponse findById(Long petId, Long userId) {
