@@ -3,6 +3,8 @@
 ################################
 
 spring:
+  profiles:
+    include: monitoring
   config:
     activate:
       on-profile: prod
@@ -110,7 +112,7 @@ management:
       exposure:
         # health: 무중단 배포 스크립트(deploy.sh)가 살아있는지 확인할 때 사용
         # prometheus: 프로메테우스가 메트릭을 수집할 때 사용
-        include: health, prometheus
+        include: health, info, metrics, prometheus
   metrics:
     tags:
       application: SafeDogBe
