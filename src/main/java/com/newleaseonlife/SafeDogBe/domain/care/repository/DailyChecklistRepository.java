@@ -38,4 +38,17 @@ public interface DailyChecklistRepository extends JpaRepository<DailyChecklist, 
 
   /** 홈 체크리스트 존재 여부 */
   boolean existsByPet_IdAndTargetDate(Long petId, LocalDate targetDate);
+
+  /** ✅ 케어리포트 선행조건: 특정 동물의 총 체크리스트 개수 파악 */
+  long countByPet_Id(Long petId); // Spring Data JPA 명명 규칙에 맞게 Pet_Id 사용
+
+  /** ✅ 통계용 기간 조회: 연관된 CareTemplate(노트) 패치 조인 */
+  @Query("SELECT d FROM DailyChecklist d " +
+      "JOIN FETCH d.careTemplate ct " + // 🚨 주의: 엔티티의 실제 필드명(careTemplate)으로 변경하세요.
+      "WHERE d.pet.id = :petId AND d.targetDate BETWEEN :startDate AND :endDate")
+  List<DailyChecklist> findForReportByPetIdAndDateBetween(
+      @Param("petId") Long petId,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate
+  );
 }
