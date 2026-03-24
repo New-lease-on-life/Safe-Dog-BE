@@ -37,9 +37,10 @@ public class DailyChecklistService {
   private final DailyChecklistRepository dailyChecklistRepository;
   private final ChecklistHistoryLogRepository historyLogRepository;
   private final UserRepository userRepository;
-  private final DailyChecklistConverter converter;
+  private final DailyChecklistConverter converter; // (주의) 빈 등록 되어있어야 함
 
-  /** 특정 날짜의 반려동물 체크리스트 목록 조회 */
+  private static final ZoneId KST_ZONE = ZoneId.of("Asia/Seoul");
+
   public List<DailyChecklistResponse> getChecklistsByDate(Long petId, LocalDate targetDate) {
     return converter.toResponseList(
         dailyChecklistRepository.findAllByPetIdAndTargetDateWithUser(petId, targetDate));
@@ -54,7 +55,7 @@ public class DailyChecklistService {
     DailyChecklist checklist = getChecklistOrThrow(checklistId);
     User user = getUserOrThrow(userId);
 
-    validateTodayOnly(checklist);
+    validateTodayOnly(checklist); // ✅ 날짜 검증 통일
 
     if (checklist.isCompleted()) {
       throw new BusinessException(CareErrorCode.CHECKLIST_ALREADY_COMPLETED);
@@ -74,7 +75,7 @@ public class DailyChecklistService {
     DailyChecklist checklist = getChecklistOrThrow(checklistId);
     User user = getUserOrThrow(userId);
 
-    validateTodayOnly(checklist);
+    validateTodayOnly(checklist); // ✅ 날짜 검증 통일
 
     if (!checklist.isCompleted()) {
       throw new BusinessException(CareErrorCode.CHECKLIST_NOT_COMPLETED);
@@ -87,14 +88,12 @@ public class DailyChecklistService {
 
   @Transactional
   public DailyChecklistResponse updateChecklist(Long checklistId, DailyChecklistUpdateRequest request) {
-    log.info("[DailyChecklistService] updateChecklist checklistId={}", checklistId);
     DailyChecklist checklist = getChecklistOrThrow(checklistId);
-    validateTodayOnly(checklist);
-
-    // checklist.update(request); 필요시 엔티티 업데이트 구현
-
+    validateTodayOnly(checklist); // ✅ 날짜 검증 통일
+    // checklist.update(request);
     return converter.toResponse(checklist);
   }
+
 
   public DailyChecklistResponse getLatestChecklist(Long checklistId) {
     log.debug("[DailyChecklistService] getLatestChecklist checklistId={}", checklistId);
@@ -117,8 +116,8 @@ public class DailyChecklistService {
    * 기획서 3: "당일 체크리스트만 수정 가능. 과거 날짜는 읽기 전용"
    */
   private void validateTodayOnly(DailyChecklist checklist) {
-    LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
-    if (!checklist.getTargetDate().equals(today)) {
+    LocalDate todayKst = LocalDate.now(KST_ZONE);
+    if (!checklist.getTargetDate().isEqual(todayKst)) {
       throw new BusinessException(CareErrorCode.CHECKLIST_DATE_NOT_TODAY);
     }
   }
