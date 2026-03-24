@@ -64,7 +64,7 @@ public class PetService {
         petRepository.findAllByUserIdOrderByCreatedAtAsc(userId));
   }
 
-  //TODO
+
   /** 마이페이지용 공유 받은 반려동물 목록 (보호자=CAREGIVER, 등록일 오래된 순) */
   public List<PetResponse> findMySharedPetsOrderByCreatedAtAsc(Long userId) {
     // [기획 반영] 타인의 초대코드를 통해 등록된(CAREGIVER) 동물만 열람
