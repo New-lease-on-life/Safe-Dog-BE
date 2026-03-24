@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/pets")
-@Tag(name = "Pet", description = "반려동물 공통 API")
+@Tag(name = "반려동물 품목 조회 엔드포인트(개발완)", description = "반려동물 공통 API")
 public class PetCommonController {
 
   @Operation(summary = "강아지 품종 목록 조회", description = "바텀 시트 렌더링용 강아지 품종 목록을 반환합니다.")
