@@ -1,6 +1,11 @@
 package com.newleaseonlife.SafeDogBe.monitoring;
 
+import static java.time.LocalDate.now;
+
 import com.newleaseonlife.SafeDogBe.domain.auth.entity.enums.ProviderType;
+import com.newleaseonlife.SafeDogBe.domain.care.entity.DailyChecklist;
+import com.newleaseonlife.SafeDogBe.domain.care.entity.enums.CareType;
+import com.newleaseonlife.SafeDogBe.domain.care.repository.DailyChecklistRepository;
 import com.newleaseonlife.SafeDogBe.domain.mypage.service.MypageService;
 import com.newleaseonlife.SafeDogBe.domain.notification.entity.enums.NotificationType;
 import com.newleaseonlife.SafeDogBe.domain.notification.service.FCMService;
@@ -11,6 +16,8 @@ import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetGuardianRole;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.SpeciesType;
 import com.newleaseonlife.SafeDogBe.domain.pet.repository.PetGuardianRepository;
 import com.newleaseonlife.SafeDogBe.domain.pet.repository.PetRepository;
+import com.newleaseonlife.SafeDogBe.domain.petnote.dto.request.ChecklistMemoRequest;
+import com.newleaseonlife.SafeDogBe.domain.petnote.service.ChecklistMemoService;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserRole;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
@@ -30,6 +37,8 @@ public class ImprovedMonitoringTrafficController {
   private final UserRepository userRepository;
   private final PetRepository petRepository;
   private final PetGuardianRepository petGuardianRepository;
+  private final ChecklistMemoService checklistMemoService;
+  private final DailyChecklistRepository dailyChecklistRepository;
 
   /**
    * 📌 알림 발송 성능 테스트
@@ -124,21 +133,24 @@ public class ImprovedMonitoringTrafficController {
   public String triggerChecklistMemoTraffic(
       @RequestParam int count,
       @RequestParam Long userId,
-      @RequestParam Long petId) {
-    
-    log.info("✍️ 체크리스트 메모 성능 테스트 시작: count={}, userId={}, petId={}", 
-             count, userId, petId);
+      @RequestParam Long checklistId) {
+
+    log.info("✍️ 메모 성능 테스트 시작: count={}, userId={}, checklistId={}",
+        count, userId, checklistId);
 
     userRepository.findById(userId)
         .orElseThrow(() -> new IllegalArgumentException(
             "❌ 존재하지 않는 유저입니다."));
 
     long startTime = System.currentTimeMillis();
+
+    ChecklistMemoRequest request =
+        new ChecklistMemoRequest("부하 테스트 메모 내용");
     
     for (int i = 0; i < count; i++) {
       try {
         // ChecklistMemoService의 실제 메서드 시그니처에 맞게 수정 필요
-        // 예: checklistMemoService.createMemo(petId, "메모 " + i);
+        checklistMemoService.createMemo(checklistId, userId, request);
       } catch (Exception e) {
         log.warn("⚠️ 메모 생성 실패 ({}번째): {}", i, e.getMessage());
       }
@@ -149,10 +161,6 @@ public class ImprovedMonitoringTrafficController {
     
     return count + "건의 메모 생성 완료 (" + duration + "ms)";
   }
-
-  // 파일 상단에 주입할 의존성 (생성자 주입)
-// private final PetRepository petRepository;
-// private final PetGuardianRepository petGuardianRepository;
 
   /**
    * 📌 부하 테스트용 슈퍼 유저 강제 생성 API (All-in-One)
@@ -177,31 +185,53 @@ public class ImprovedMonitoringTrafficController {
     user.updateFcmToken("dummy-fcm-token-" + randomStr);
     user = userRepository.save(user);
 
-    // 2. 펫 강제 생성
-    Pet pet = Pet.builder()
-        .user(user)
-        .name("테스트멍멍이_" + randomStr)
-        .species(SpeciesType.DOG)
-        .gender(Gender.MALE)
-        .birthDate(java.time.LocalDate.now().minusYears(2)) // 2살
-        .build();
-    pet = petRepository.save(pet);
+    java.util.List<Long> petIds = new java.util.ArrayList<>();
+    Pet lastCreatedPet = null; // 체크리스트 생성을 위해 마지막 펫 저장
 
-    // 3. 보호자(OWNER) 매핑 (마이페이지 및 메모 권한 통과용)
-    PetGuardian guardian =
-        PetGuardian.builder()
-            .user(user)
-            .pet(pet)
-            .role(PetGuardianRole.OWNER)
-            .build();
-    petGuardianRepository.save(guardian);
+    // 2. 펫 강제 생성
+    for (int i = 0; i < 10; i++) {
+      Pet pet = Pet.builder()
+          .user(user)
+          .name("테스트멍멍이_" + randomStr)
+          .species(SpeciesType.DOG)
+          .gender(Gender.MALE)
+          .birthDate(now().minusYears(2)) // 2살
+          .build();
+
+      lastCreatedPet = petRepository.save(pet);
+      petIds.add(lastCreatedPet.getId());
+
+      // 3. 보호자(OWNER) 매핑 (마이페이지 및 메모 권한 통과용)
+      PetGuardian guardian =
+          PetGuardian.builder()
+              .user(user)
+              .pet(pet)
+              .role(PetGuardianRole.OWNER)
+              .build();
+      petGuardianRepository.save(guardian);
+      log.info("[테스트 유저 생성] {}번째 펫 및 보호자 등록 완료: ID {}", i, lastCreatedPet.getId());
+    }
+    DailyChecklist checklist =
+        dailyChecklistRepository.save(DailyChecklist.builder()
+            .pet(lastCreatedPet)
+            .targetDate(java.time.LocalDate.now()) // 명시적 타입 지정
+            .careType(CareType.ETC)                // category -> careType으로 수정
+            .title("모니터링용 가짜 할일")           // taskName -> title로 수정
+            .content("부하 테스트를 위한 자동 생성 데이터입니다.") // 생성자에 포함된 필드
+            .build());
 
     // 4. 테스트하기 편하도록 ID값들을 JSON으로 반환
-    java.util.Map<String, Object> result = new java.util.HashMap<>();
-    result.put("message", "✅ 모든 조건을 만족하는 테스트 유저 세팅 완료!");
+
+    java.util.Map<String, Object> result = new java.util.LinkedHashMap<>(); // 순서 보장을 위해 LinkedHashMap 사용
+    result.put("message", "✅ 테스트 유저 및 데이터 세팅 완료");
     result.put("userId", user.getId());
-    result.put("petId", pet.getId());
+    result.put("email", user.getEmail());
     result.put("fcmToken", user.getFcmToken());
+    result.put("createdPetCount", petIds.size());
+    result.put("petIds", petIds); // 생성된 모든 펫 ID 반환
+    result.put("checklistId", checklist.getId());
+    result.put("message", "✅ 모든 조건을 만족하는 테스트 유저 세팅 완료!");
+
 
     return result;
   }
