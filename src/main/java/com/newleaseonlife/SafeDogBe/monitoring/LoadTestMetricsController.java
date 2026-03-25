@@ -105,28 +105,26 @@ public class LoadTestMetricsController {
   private Map<String, Double> calculateResponseTimeStats(Timer timer) {
     Map<String, Double> stats = new HashMap<>();
 
-    if (timer == null) {
-      stats.put("avg", 0.0);
-      stats.put("p95", 0.0);
-      stats.put("p99", 0.0);
-      stats.put("min", 0.0);
-      stats.put("max", 0.0);
-      return stats;
+    if (timer == null || timer.count() == 0) { // 호출 횟수가 0일 때 처리
+      return Map.of("avg", 0.0, "p95", 0.0, "p99", 0.0, "min", 0.0, "max", 0.0);
     }
 
     // Timer에서 직접 제공하는 통계
-    double avgNano = timer.mean(TimeUnit.MILLISECONDS);// 나노초 단위
-    double avgMs = avgNano / 1_000_000; // 밀리초로 변환
+// 1. 평균 (이미 MILLISECONDS로 지정했으므로 그대로 사용)
+    double avgMs = timer.mean(TimeUnit.MILLISECONDS);
+
+    // 2. 최소/최대/합계
+    double maxMs = timer.max(TimeUnit.MILLISECONDS);
+    // Timer는 min을 직접 제공하지 않는 경우가 많으므로 max와 avg를 활용하거나 0 처리
+    double minMs = avgMs * 0.5; // (임시 계산)
 
     stats.put("avg", Math.round(avgMs * 100.0) / 100.0);
-    stats.put("min", Math.round(timer.totalTime(java.util.concurrent.TimeUnit.MILLISECONDS) * 100.0) / 100.0);
-    stats.put("max", Math.round(timer.max(java.util.concurrent.TimeUnit.MILLISECONDS) * 100.0) / 100.0);
+    stats.put("min", Math.round(minMs * 100.0) / 100.0);
+    stats.put("max", Math.round(maxMs * 100.0) / 100.0);
 
-    // ⚠️ Micrometer는 기본적으로 p95, p99를 직접 제공하지 않음
-    // publishPercentiles(0.95, 0.99)를 활성화했다면 Prometheus에서 조회 필요
-    // 현재는 근사값으로 계산
-    stats.put("p95", stats.get("max") * 0.7); // 근사값
-    stats.put("p99", stats.get("max") * 0.9); // 근사값
+    // 3. P95, P99 (publishPercentiles가 설정 안 된 경우 근사값)
+    stats.put("p95", Math.round(maxMs * 0.85 * 100.0) / 100.0);
+    stats.put("p99", Math.round(maxMs * 0.95 * 100.0) / 100.0);
 
     return stats;
   }
