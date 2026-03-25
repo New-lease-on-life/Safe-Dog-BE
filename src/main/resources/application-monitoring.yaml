@@ -1,5 +1,4 @@
-# 모니터링 프로필 전용 설정 (기존 yaml 수정 없이 사용)
-# 사용 시: --spring.profiles.include=monitoring 또는 SPRING_PROFILES_INCLUDE=monitoring
+# 모니터링 프로필 전용 설정 (운영 환경과 독립적으로 관리)
 spring:
   config:
     activate:
@@ -9,10 +8,22 @@ management:
   endpoints:
     web:
       exposure:
+        # 핵심 엔드포인트 통합 노출
         include: health,info,metrics,prometheus
   endpoint:
     health:
+      # 백엔드 장애 조치를 위해 상세 상태 항상 노출
       show-details: always
   metrics:
     tags:
+      # 모든 메트릭에 애플리케이션 식별자 부여 (Grafana 필터링용)
       application: SafeDogBe
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        # [중요] 커스텀 API의 응답 속도 분포(P95, P99)를 측정하기 위한 설정
+        safedog.api.*.time: true
+        # (참고) 일반적인 HTTP 요청도 함께 보고 싶다면 아래 라인 주석 해제
+        # http.server.requests: true
