@@ -46,6 +46,7 @@ public class LoadTestMetricsController {
     log.info("📊 메트릭 조회: {}", apiName);
 
     Map<String, Object> response = new HashMap<>();
+    String normalizedApiName = apiName.replace("-", "").toLowerCase();
     String metricPrefix = "safedog.api." + apiName;
 
     try {
@@ -225,7 +226,7 @@ public class LoadTestMetricsController {
             Map.of("name", "mypage", "description", "마이페이지 조회"),
             Map.of("name", "pet", "description", "펫 생성"),
             Map.of("name", "auth", "description", "회원가입"),
-            Map.of("name", "checklist", "description", "체크리스트 메모")
+            Map.of("name", "checklistmemo", "description", "체크리스트 메모")
         ),
         "usage", "GET /api/monitoring/metrics/{apiName}"
     );
