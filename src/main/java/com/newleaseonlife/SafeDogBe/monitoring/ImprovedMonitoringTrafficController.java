@@ -189,7 +189,7 @@ public class ImprovedMonitoringTrafficController {
     Pet lastCreatedPet = null; // 체크리스트 생성을 위해 마지막 펫 저장
 
     // 2. 펫 강제 생성
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 50; i++) {
       Pet pet = Pet.builder()
           .user(user)
           .name("테스트멍멍이_" + randomStr)

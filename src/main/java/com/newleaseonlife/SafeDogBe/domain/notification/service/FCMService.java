@@ -34,13 +34,10 @@ public class FCMService {
    * @param body 내용
    * @param relatedId 관련 ID
    */
-  //@Async
+  @Async
   public void sendPushNotification(User user, NotificationType notificationType,
       String title, String body, String relatedId) {
 
-    try {
-      Thread.sleep(500); // 여기서 메인 스레드가 꼼짝 못하고 0.5초 갇힙니다.
-    } catch (InterruptedException e) {}
 
     // 1. 부하테스트용 더미 토큰 처리
     if (user.getFcmToken() != null && user.getFcmToken().startsWith("dummy-fcm-token")) {
