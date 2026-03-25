@@ -26,4 +26,4 @@ management:
         # [중요] 커스텀 API의 응답 속도 분포(P95, P99)를 측정하기 위한 설정
         safedog.api.*.time: true
         # (참고) 일반적인 HTTP 요청도 함께 보고 싶다면 아래 라인 주석 해제
-        # http.server.requests: true
+        http.server.requests: true
