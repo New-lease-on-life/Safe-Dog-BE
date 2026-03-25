@@ -38,6 +38,14 @@ public class FCMService {
   public void sendPushNotification(User user, NotificationType notificationType,
       String title, String body, String relatedId) {
 
+    // 1. 부하테스트용 더미 토큰 처리
+    if (user.getFcmToken() != null && user.getFcmToken().startsWith("dummy-fcm-token")) {
+      // 실제 전송 시간을 시뮬레이션하고 싶다면 아주 짧은 sleep을 줄 수도 있습니다.
+      // Thread.sleep(10); // 필요 시 10ms 정도 대기
+      log.debug("[부하테스트] 더미 토큰 감지 - 성공 처리: userId={}", user.getId());
+      return;
+    }
+
     // FCM 토큰이 없으면 전송 불가
     if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
       log.warn("FCM token not found for user: {}", user.getId());
