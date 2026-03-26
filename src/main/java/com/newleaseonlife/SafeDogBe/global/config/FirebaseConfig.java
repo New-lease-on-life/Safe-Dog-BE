@@ -6,9 +6,9 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -18,11 +18,12 @@ import java.io.IOException;
 @Slf4j
 public class FirebaseConfig {
 
-  // 파라미터 스토어의 이름을 변수로 받습니다.
-  @Value("${firebase.credentials-path}")
+  // 파라미터 스토어에서 전달받는 Base64 인코딩 Firebase credentials(JSON)
+  @Value("${firebase.credentials-path:}")
   private String firebaseCredentialsContent;
 
   @Bean
+  @ConditionalOnProperty(name = "firebase.credentials-path")
   public FirebaseApp firebaseApp() throws IOException {
     if (FirebaseApp.getApps().isEmpty()) {
 
@@ -44,6 +45,7 @@ public class FirebaseConfig {
   }
 
   @Bean
+  @ConditionalOnProperty(name = "firebase.credentials-path")
   public FirebaseMessaging firebaseMessaging(FirebaseApp firebaseApp) {
     return FirebaseMessaging.getInstance(firebaseApp);
   }

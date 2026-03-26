@@ -11,6 +11,7 @@ import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +23,7 @@ import java.util.Map;
 @Slf4j
 public class FCMService {
 
-  private final FirebaseMessaging firebaseMessaging;
+  private final ObjectProvider<FirebaseMessaging> firebaseMessagingProvider;
   private final UserRepository userRepository;
 
   /**
@@ -37,6 +38,11 @@ public class FCMService {
   @Async
   public void sendPushNotification(User user, NotificationType notificationType,
       String title, String body, String relatedId) {
+    FirebaseMessaging firebaseMessaging = firebaseMessagingProvider.getIfAvailable();
+    if (firebaseMessaging == null) {
+      log.warn("FirebaseMessaging bean is not configured. Skip push send. userId={}", user.getId());
+      return;
+    }
 
 
     // 1. 부하테스트용 더미 토큰 처리
@@ -99,6 +105,11 @@ public class FCMService {
    * @param body 내용
    */
   public void sendTopicNotification(String topic, String title, String body) {
+    FirebaseMessaging firebaseMessaging = firebaseMessagingProvider.getIfAvailable();
+    if (firebaseMessaging == null) {
+      log.warn("FirebaseMessaging bean is not configured. Skip topic send. topic={}", topic);
+      return;
+    }
     try {
       Notification notification = Notification.builder()
           .setTitle(title)
@@ -151,6 +162,11 @@ public class FCMService {
    * @param topic 토픽명
    */
   public void subscribeToTopic(java.util.List<String> tokens, String topic) {
+    FirebaseMessaging firebaseMessaging = firebaseMessagingProvider.getIfAvailable();
+    if (firebaseMessaging == null) {
+      log.warn("FirebaseMessaging bean is not configured. Skip topic subscribe. topic={}", topic);
+      return;
+    }
     try {
       firebaseMessaging.subscribeToTopic(tokens, topic);
       log.info("Tokens subscribed to topic: {}", topic);
