@@ -3,10 +3,12 @@ package com.newleaseonlife.SafeDogBe.domain.pet.repository;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.PetGuardian;
 import com.newleaseonlife.SafeDogBe.domain.pet.entity.enums.PetGuardianRole;
 
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * 반려동물-보호자(pet_guardian) 영속화.
@@ -31,4 +33,15 @@ public interface PetGuardianRepository extends JpaRepository<PetGuardian, Long> 
 
     /** 특정 회원이 보호자로 등록된 모든 반려동물 목록 (OWNER + CAREGIVER) */
     List<PetGuardian> findByUserId(Long userId);
+
+    /** * ✅ 성능 최적화 버전 (Fetch Join)
+     * 유저가 속한 모든 펫과, 그 펫들에 연결된 모든 보호자 정보를 한 번에 조회
+     */
+    @Query("SELECT pg FROM PetGuardian pg " +
+        "JOIN FETCH pg.pet p " +         // 펫 정보 즉시 로딩
+        "JOIN FETCH pg.user u " +        // 보호자 유저 정보 즉시 로딩
+        "WHERE pg.pet.id IN (" +
+        "  SELECT pg2.pet.id FROM PetGuardian pg2 WHERE pg2.user.id = :userId AND pg2.role = :role" +
+        ") ORDER BY p.createdAt ASC")
+    List<PetGuardian> findAllMyPetsWithGuardiansByRole(@Param("userId") Long userId, @Param("role") PetGuardianRole role);
 }
