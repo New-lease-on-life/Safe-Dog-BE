@@ -51,6 +51,24 @@ public class ChecklistMemoService {
     return ChecklistMemoResponse.from(checklistMemoRepository.save(memo));
   }
 
+  @Transactional
+  public void createMemosBulk(Long checklistId, Long userId, List<String> contents) {
+    DailyChecklist checklist = getChecklistOrThrow(checklistId);
+    User user = getUserOrThrow(userId);
+
+    // 데이터를 메모리에서 먼저 다 생성합니다.
+    List<ChecklistMemo> memos = contents.stream()
+        .map(content -> ChecklistMemo.builder()
+            .dailyChecklist(checklist)
+            .author(user)
+            .content(content)
+            .build())
+        .toList();
+
+    // 💡 JPA saveAll()을 사용하거나 JDBC Batch를 사용하여 한 번에 꽂아 넣습니다.
+    checklistMemoRepository.saveAll(memos);
+  }
+
   /** 3. 메모 수정 (작성자 본인만) */
   @Transactional
   public ChecklistMemoResponse updateMemo(Long memoId, Long userId, ChecklistMemoRequest request) {

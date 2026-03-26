@@ -22,6 +22,8 @@ import com.newleaseonlife.SafeDogBe.domain.user.entity.User;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserRole;
 import com.newleaseonlife.SafeDogBe.domain.user.entity.enums.UserStatus;
 import com.newleaseonlife.SafeDogBe.domain.user.repository.UserRepository;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -160,6 +162,22 @@ public class ImprovedMonitoringTrafficController {
     log.info("✅ 메모 성능 테스트 완료: {}ms 소요", duration);
     
     return count + "건의 메모 생성 완료 (" + duration + "ms)";
+  }
+
+  // ImprovedMonitoringTrafficController.java 수정
+  @PostMapping("/checklist-memo/bulk")
+  public String triggerChecklistMemoBulkTraffic(@RequestParam int count, @RequestParam Long userId, @RequestParam Long checklistId) {
+    List<String> contents = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      contents.add("부하 테스트 메모 " + i);
+    }
+
+    long startTime = System.currentTimeMillis();
+    // 서비스를 딱 '한 번' 호출합니다.
+    checklistMemoService.createMemosBulk(checklistId, userId, contents);
+    long duration = System.currentTimeMillis() - startTime;
+
+    return count + "건의 벌크 메모 생성 완료 (" + duration + "ms)";
   }
 
   /**
