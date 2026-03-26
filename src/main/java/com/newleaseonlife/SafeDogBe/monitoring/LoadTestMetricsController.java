@@ -47,7 +47,7 @@ public class LoadTestMetricsController {
 
     Map<String, Object> response = new HashMap<>();
     String normalizedApiName = apiName.replace("-", "").toLowerCase();
-    String metricPrefix = "safedog.api." + apiName;
+    String metricPrefix = "safedog.api." + normalizedApiName;
 
     try {
       // 1️⃣ 요청 수 계산
